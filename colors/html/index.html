@@ -1,0 +1,133 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>wxPython: tutorial su tecniche di programmazione OOP &mdash; tutorial wxPython-OOP</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="tutorial wxPython-OOP" href="#" />
+    <link rel="next" title="Introduzione" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="intro.html" title="Introduzione"
+             accesskey="N">next</a></li>
+        <li><a href="#">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="wxpython-tutorial-su-tecniche-di-programmazione-oop">
+<h1>wxPython: tutorial su tecniche di programmazione OOP<a class="headerlink" href="#wxpython-tutorial-su-tecniche-di-programmazione-oop" title="Permalink to this headline">¶</a></h1>
+<p>Indice:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduzione</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parte_1.html">1. Costruire la finestra principale dell&#8217;applicazione.</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="parte_1.html#spinslider-il-componente-base">1.1. SpinSlider: il componente-base.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_1.html#spinsliderevent-un-evento-personalizzato-per-lo-spinslider">1.2. SpinSliderEvent: un evento personalizzato per lo SpinSlider.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_1.html#sliderpanel-un-widget-composto-per-rappresentare-un-colore">1.3. SliderPanel: un widget composto per rappresentare un colore.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_1.html#l-evt-spinslider-si-propaga-allo-sliderpanel">1.4. L&#8217;EVT_SPINSLIDER si propaga allo SliderPanel.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_1.html#maincolorconfront-uniamo-tutto-nella-finestra-principale">1.5. MainColorConfront: uniamo tutto nella finestra principale.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_1.html#l-evt-spinslider-arriva-finalmente-a-destinazione">1.6. L&#8217;EVT_SPINSLIDER arriva finalmente a destinazione.</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parte_2.html">2. Le tavole di confronto.</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="parte_2.html#confrontwindow-lo-scheletro-della-tavola-di-confronto">2.1. ConfrontWindow: lo scheletro della tavola di confronto.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_2.html#baseconfrontarea-una-classe-base-astratta-per-le-aree-di-confronto">2.2. BaseConfrontArea: una classe-base astratta per le aree di confronto.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_2.html#fieldsconfrontarea-un-area-di-confronto-con-due-zone-di-colore-accostate">2.3. FieldsConfrontArea: un&#8217;area di confronto con due zone di colore accostate.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_2.html#textonbgconfrontarea-un-area-per-confrontare-il-colore-di-un-testo-sullo-sfondo">2.4. TextOnBgConfrontArea: un&#8217;area per confrontare il colore di un testo sullo sfondo.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_2.html#getconfrontarea-una-funzione-per-la-scelta-delle-aree-di-confronto">2.5. getConfrontArea: una funzione per la  scelta delle aree di confronto.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_2.html#come-aggiungere-una-nuova-area-di-confronto">2.6. Come aggiungere una nuova area di confronto.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_2.html#l-interfaccia-pubblica-del-modulo">2.7. L&#8217;interfaccia pubblica del modulo.</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parte_3.html">3. Il sistema di messaggi tra i componenti del programma.</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="parte_3.html#il-pattern-publish-subscriber">3.1. Il pattern publish/subscriber.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_3.html#una-semplice-implementazione-di-pub-sub">3.2. Una semplice implementazione di pub/sub.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_3.html#wx-lib-pubsub-un-implementazione-completa-di-pub-sub">3.3. wx.lib.pubsub: un&#8217;implementazione completa di pub/sub.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_3.html#aggiungere-un-sistema-pub-sub-al-nostro-programma">3.4. Aggiungere un sistema pub/sub al nostro programma.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parte_3.html#ascoltare-i-messaggi-inviati">3.5. Ascoltare i messaggi inviati.</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="conclusione.html">Conclusione.</a></li>
+<li class="toctree-l1"><a class="reference internal" href="appendice.html">Appendice: il codice completo del programma.</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="appendice.html#modulo-color-main-i-componenti-della-finestra-principale">1. Modulo color_main: i componenti della finestra principale.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="appendice.html#modulo-confront-area-le-finestre-secondarie-dell-interfaccia">2. Modulo confront_area: le finestre secondarie dell&#8217;interfaccia.</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Next topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="next chapter">Introduzione</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="intro.html" title="Introduzione"
+             >next</a></li>
+        <li><a href="#">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Riccardo Polignieri.
+      Last updated on Dec 01, 2011.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

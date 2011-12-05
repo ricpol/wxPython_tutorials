@@ -1,0 +1,16 @@
+
+Introduzione
+============
+
+Questo tutorial vi farà conoscere alcuni aspetti "avanzati ma non troppo" della programmazione con wxPython. Vedremo, nell'ordine:
+
+* come costruire widget complessi a partire da componenti più semplici;
+* come creare e usare un semplice evento personalizzato;
+* come usare alcune tecniche OOP per organizzare meglio il codice, fino a scrivere dei componenti "plugin" per la nostra interfaccia;
+* come organizzare un servizio di messaggi (applicando il pattern OOP noto come "publish/subscriber") per far comunicare i componenti della nostra interfaccia.
+
+L'ultimo punto è quello forse più interessante, e ci spenderemo qualche paragrafo in più. 
+
+Ma procediamo con ordine. Scaricate il programma (sono solo due moduli) e provatelo. Come vedete, è una utility per accostare e confrontare i colori in vari modi. L'ho scritto inizialmente per aiutarmi con alcuni lavori di grafica per siti web. Questa è una versione semplificata: l'originale aveva alcune altre feature utili, ma meno interessanti dal punto di vista "didattico". 
+
+Come vedete, il programma ha una finestra principale, che presenta i controlli per selezionare due colori (che si possono vedere in anteprima nei due rettangoli in alto). Ma il divertimento vero inizia quando aprite una "tavola di confronto" (scegliete dalla lista in basso). La tavola resta inerte finché non cliccate sul pulsante "connetti", dopo di che aggiorna i suoi colori, tenendo dietro ai cambiamenti fatti nella finestra principale. Potete aprire quante tavole volete, e anche più copie della stessa tavola. 

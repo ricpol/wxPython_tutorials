@@ -1,0 +1,16 @@
+
+Conclusione.
+============
+
+Eccoci arrivati alla conclusione di questo tutorial su alcune tecniche OOP applicate a wxPython. 
+
+Il programma che abbiamo esaminato è una versione "alleggerita" di una utility che avevo effettivamente scritto tempo fa. La versione completa conteneva altre cose, che volendo si possono aggiungere come esercizio: 
+
+  * una tavolozza per memorizzare i colori trovati (con la possibilità di salvare su file e ricaricare le tavolozze salvate);
+  * alcune tavole di confronto in più (tra cui una fatta a scacchiera, una a pois (!) e una con un'immagine caricabile a scelta, e un colore di sfondo da cambiare);
+  * la possibilità di muoversi in diversi spazi-colore, non solo RGB;
+  * il supporto per i nomi riconosciuti dagli standard html e css;
+  * il calcolo dei colori complementari, triadici, etc.
+  
+Se pensate che il software vi può servire, sentitevi liberi di modificarlo e integrarlo come volete. In ogni caso, spero che questo tutorial vi abbia dato alcuni spunti per organizzare meglio il vostro codice. 
+

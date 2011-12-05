@@ -1,0 +1,323 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1. Costruire la finestra principale dell’applicazione. &mdash; tutorial wxPython-OOP</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="tutorial wxPython-OOP" href="index.html" />
+    <link rel="next" title="2. Le tavole di confronto." href="parte_2.html" />
+    <link rel="prev" title="Introduzione" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="parte_2.html" title="2. Le tavole di confronto."
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="intro.html" title="Introduzione"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="costruire-la-finestra-principale-dell-applicazione">
+<h1>1. Costruire la finestra principale dell&#8217;applicazione.<a class="headerlink" href="#costruire-la-finestra-principale-dell-applicazione" title="Permalink to this headline">¶</a></h1>
+<p>Quando avete capito che <em>cosa</em> fa il programma, è tempo di scoprire <em>come</em> lo fa. Il primo file che esaminiamo, <tt class="docutils literal"><span class="pre">color_main.py</span></tt>, contiene tutto il codice della finestra principale. Il codice è in inglese, ma le docstring e i commenti sono lasciati in italiano per comodità.</p>
+<p>La parte principale di questa finestra è costituita da due set di sei Slider e sei SpinCtrl, accoppiati tra loro. Avremmo potuto naturalmente inserirli uno dopo l&#8217;altro, &#8220;a pari grado&#8221; nel layout della finestra, ma non sarebbe stato molto saggio. In tutti i casi dove troviamo un pattern ripetitivo, conviene piuttosto identificare e isolare il codice che si ripete, e metterlo in un luogo specifico (un modulo, una classe, una funzione) così da poterlo riutilizzare più volte. Detto in altri termini, <strong>fattorizzare il codice</strong>.</p>
+<div class="section" id="spinslider-il-componente-base">
+<h2>1.1. SpinSlider: il componente-base.<a class="headerlink" href="#spinslider-il-componente-base" title="Permalink to this headline">¶</a></h2>
+<p>Il primo codice che scriviamo, quindi, è una classe che &#8220;impacchetta&#8221; un <tt class="docutils literal"><span class="pre">wx.Slider</span></tt> e un <tt class="docutils literal"><span class="pre">wx.SpinCtrl</span></tt>, e li mantiene sincronizzati tra loro. Cerchiamo di scriverla in modo totalmente indipendente dall&#8217;uso che ne dovremmo fare dopo. La classe <tt class="docutils literal"><span class="pre">SpinSlider</span></tt> illustra questo concetto:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">SpinSlider</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">SpinCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">SL_VERTICAL</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">SL_INVERSE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SPINCTRL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_spin</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_slider</span><span class="p">)</span>
+
+        <span class="c"># etc. etc.</span>
+
+    <span class="k">def</span> <span class="nf">_on_spin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_custom_event</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_custom_event</span><span class="p">()</span>
+
+    <span class="c"># etc. etc.</span>
+
+    <span class="k">def</span> <span class="nf">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">GetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+
+    <span class="c"># etc. etc.</span>
+</pre></div>
+</div>
+<p>La classe è corta e semplice da capire (un altro dei vantaggi della fattorizzazione). Il nostro SpinSlider ha al suo interno solo tre cose: una <tt class="docutils literal"><span class="pre">wx.Label</span></tt>, un <tt class="docutils literal"><span class="pre">wx.Slider</span></tt> e un <tt class="docutils literal"><span class="pre">wx.SpinCtrl</span></tt>. La classe deriva da un <tt class="docutils literal"><span class="pre">wx.Panel</span></tt>, in modo da poterne utilizzare le funzionalitè (prima tra tutte, la possibilità di ospitare un sizer per il layout dei tre elementi). Nel metodo <tt class="docutils literal"><span class="pre">__init__</span></tt> ci limitiamo a definire i componenti e realizzare il layout come di consueto.</p>
+<p>Notate che vogliamo intercettare gli eventi che provengono da <em>entrambi</em> i componenti (e quindi <tt class="docutils literal"><span class="pre">wx.EVT_SLIDER</span></tt> e <tt class="docutils literal"><span class="pre">wx.EVT_SPINCTRL</span></tt>). In ciascuno dei due gestori (rispettivamente <tt class="docutils literal"><span class="pre">_on_slider</span></tt> e <tt class="docutils literal"><span class="pre">_on_spin</span></tt>) manteniamo sincronizzati i valori, e questo è sufficiente a garantire la funzionalità di base del nostro SpinSlider.
+Aggiungiamo poi alcuni metodi &#8220;di servizio&#8221; come <tt class="docutils literal"><span class="pre">GetValue</span></tt>, <tt class="docutils literal"><span class="pre">SetValue</span></tt> etc., che serviranno al codice che deve usare &#8220;dall&#8217;esterno&#8221; il nostro widget.</p>
+</div>
+<div class="section" id="spinsliderevent-un-evento-personalizzato-per-lo-spinslider">
+<h2>1.2. SpinSliderEvent: un evento personalizzato per lo SpinSlider.<a class="headerlink" href="#spinsliderevent-un-evento-personalizzato-per-lo-spinslider" title="Permalink to this headline">¶</a></h2>
+<p>Fin qui, niente di particolarmente complesso, come si vede. In questi casi, la decisione più difficile è sempre quella iniziale: una volta deciso come organizzare la struttura del nostro programma, il codice si scrive (quasi) da solo.</p>
+<p>Adesso però dobbiamo fronteggiare il primo problema tecnico. Quando l&#8217;utente modifica il valore del nostro SpinSlider, quale evento deve essere innescato per segnalare questo fatto al resto del sistema? Come abbiamo visto, l&#8217;utente potrebbe intervenire sullo Slider (e innescare un <tt class="docutils literal"><span class="pre">EVT_SLIDER</span></tt>) o sullo SpinCtrl (e dare avvio a un <tt class="docutils literal"><span class="pre">EVT_SPINCTRL</span></tt>). Entrambi derivano da <tt class="docutils literal"><span class="pre">wx.CommandEvent</span></tt>, e pertanto possono propagarsi naturalmente lungo la gerarchia dei contenitori (ricordiamo che i <tt class="docutils literal"><span class="pre">wx.CommandEvent</span></tt> si propagano, mentre i <tt class="docutils literal"><span class="pre">wx.Event</span></tt> no).</p>
+<p>Potremmo sfruttare quindi la propagazione: se per esempio scriviamo:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">_on_spin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span> <span class="c"># sincronizzo...</span>
+    <span class="n">evt</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>  <span class="c"># ... e lascio che l&#39;evento si propaghi</span>
+</pre></div>
+</div>
+<p>Questo basterebbe a far propagare l&#8217;evento. Quindi qualsiasi componente &#8220;esterno&#8221; potrebbe limitarsi a intercettare un <tt class="docutils literal"><span class="pre">EVT_SPIN</span></tt> e reagire di conseguenza. Ma c&#8217;è un problema. Non possiamo lasciare che si propaghi solo uno dei due eventi e ignorare l&#8217;altro, perché quando l&#8217;utente agisce sul widget che non propaga, dall&#8217;esterno sembra che non sia successo nulla. Dobbiamo quindi far propagare <em>entrambi</em> gli eventi: ma questo vuol dire che il codice che usa il nostro SpinSlider dovrà ricordarsi sempre di intercettarli <em>entrambi</em>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># nel codice client:</span>
+<span class="n">mySpinSlider</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="n">mySpinSlider</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_spinslider</span><span class="p">)</span>   <span class="c"># l&#39;uno...</span>
+<span class="n">mySpinSlider</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SPINCTRL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_spinslider</span><span class="p">)</span> <span class="c"># ... e l&#39;altro!</span>
+<span class="c"># un po&#39; scomodo!</span>
+</pre></div>
+</div>
+<p>Questo è perfettamente possibile, naturalmente: ma ci sembra poco elegante. E allora? Scegliamo di creare un nuovo evento personalizzato, e di emetterlo manualmente al momento giusto.</p>
+<p>Per prima cosa, scriviamo il nuovo evento, la classe <tt class="docutils literal"><span class="pre">SpinSliderEvent</span></tt>. Ci basterebbe derivarlo da <tt class="docutils literal"><span class="pre">wx.CommandEvent</span></tt> per dargli la facoltà di propagarsi. Purtroppo non è possibile derivare direttamente da <tt class="docutils literal"><span class="pre">wx.CommandEvent</span></tt> (che è una classe sensibile solo al lato C++ delle wxWidgets), ma poco male: wxPython ci mette a disposizione una classe-specchio <tt class="docutils literal"><span class="pre">wx.PyCommandEvent</span></tt>, che possiamo usare al suo posto.</p>
+<p>Nel nostro caso ci basta scrivere una classe &#8220;vuota&#8221;:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">SpinSliderEvent</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">PyCommandEvent</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evtType</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PyCommandEvent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evtType</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Ma se volessimo potremmo aggiungere delle variabili da trasmettere insieme all&#8217;evento:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">MyEvent</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">PyCommandEvent</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evtType</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PyCommandEvent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evtType</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">my_val</span> <span class="o">=</span> <span class="s">&#39;foo&#39;</span> <span class="c"># questo sara&#39; poi accessibile come event.my_val</span>
+</pre></div>
+</div>
+<p>Una volta scritto il nostro evento personalizzato, il modo standard di predisporlo all&#8217;uso consiste in queste due righe:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">myEVT_SPINSLIDER</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewEventType</span><span class="p">()</span>
+<span class="n">EVT_SPINSLIDER</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">PyEventBinder</span><span class="p">(</span><span class="n">myEVT_SPINSLIDER</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Con la prima istanziamo un nuovo &#8220;tipo di evento&#8221;. Questo è un dettaglio tecnico che non vale la pena di approfondire (semplicemente: fate così e tutto funzionerà!): tuttavia notate che il paramentro <tt class="docutils literal"><span class="pre">evtType</span></tt>, richiesto nell&#8217;<tt class="docutils literal"><span class="pre">__init__</span></tt> della nostra classe <tt class="docutils literal"><span class="pre">SpinSliderEvent</span></tt>, sarà appunto questo &#8220;tipo di evento&#8221; che abbiamo appena creato.</p>
+<p>Con la seconda riga creiamo un <tt class="docutils literal"><span class="pre">EventBinder</span></tt> pronto all&#8217;uso per il nostro tipo di evento. Anche questo è molto tecnico, e a noi basta sapere che, se facciamo così, funzionerà. In ogni caso, un <tt class="docutils literal"><span class="pre">EventBinder</span></tt> è l&#8217;oggetto che dietro le quinte viene usato quando si chiama il familiare <tt class="docutils literal"><span class="pre">Bind()</span></tt> per collegare un evento a un gestore. Il secondo parametro che passiamo all&#8217;<tt class="docutils literal"><span class="pre">EventBinder</span></tt> indica una cosa strana: <strong>quanti ID</strong> si deve aspettare l&#8217;evento, al momento in cui dovrà essere creato. Questo risulterà più chiaro da capire tra un attimo, per il momento basta sapere che, nel 99% dei casi, la risposta è: basta uno, grazie!</p>
+<p>Conviene infine, per uniformità con gli altri <tt class="docutils literal"><span class="pre">EventBinder</span></tt> predefiniti e consueti, dare anche al nostro un nome conforme allo schema <tt class="docutils literal"><span class="pre">EVT_XXXX</span></tt>.</p>
+<p>Completata la creazione del nostro evento personalizzato, vediamo come possiamo emetterlo dall&#8217;interno del nostro SpinSlider. Questo compito è assolto dal metodo <tt class="docutils literal"><span class="pre">_post_custom_event</span></tt>. Vediamolo nel dettaglio:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">_post_custom_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">evt</span> <span class="o">=</span> <span class="n">SpinSliderEvent</span><span class="p">(</span><span class="n">myEVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">GetEventHandler</span><span class="p">()</span><span class="o">.</span><span class="n">ProcessEvent</span><span class="p">(</span><span class="n">evt</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Anche questo è un procedimento standard: non è necessario capire tutti i dettagli del suo funzionamento. Con la prima riga creiamo un&#8217;istanza del nostro evento. Passiamo come primo parametro il &#8220;tipo di evento&#8221; definito prima, e poi (vi ricordate?) <strong>un solo ID</strong> (il nostro stesso). Ci sono casi in cui è utile passare più di un ID (per esempio per raggruppare gli eventi dei menu), ma di solito basta passarne uno solo, ossia naturalmente l&#8217;ID dell&#8217;oggetto stesso che scatena l&#8217;evento.</p>
+<p>La seconda riga è quella che effettivamente lancia l&#8217;evento verso l&#8217;esterno. Si invoca l&#8216;&#8220;event handler&#8221; appropriato (un altro oggetto misterioso che lavora dietro le quinte, e di cui non dobbiamo preoccuparci troppo), e gli si ordina senza tante cerimonie di innescare l&#8217;evento.</p>
+<p>Possiamo completare l&#8217;opera con una chiamata a <tt class="docutils literal"><span class="pre">_post_custom_event</span></tt> nei punti in cui ce n&#8217;è bisogno: al termine dei due gestori <tt class="docutils literal"><span class="pre">_on_spin</span></tt> e <tt class="docutils literal"><span class="pre">_on_slider</span></tt>.</p>
+<p>A questo punto, con una procedura forse un po&#8217; oscura nei dettagli ma tutto sommato semplice da seguire, il nostro SpinSlider è in grado di innescare un <tt class="docutils literal"><span class="pre">EVT_SPINSLIDER</span></tt> ogni volta che l&#8217;utente agisce su uno dei due widget interni. Vedremo tra poco come raccoglierlo e farne l&#8217;uso migliore.</p>
+</div>
+<div class="section" id="sliderpanel-un-widget-composto-per-rappresentare-un-colore">
+<h2>1.3. SliderPanel: un widget composto per rappresentare un colore.<a class="headerlink" href="#sliderpanel-un-widget-composto-per-rappresentare-un-colore" title="Permalink to this headline">¶</a></h2>
+<p>Adesso che abbiamo scritto il nostro componente-base (<tt class="docutils literal"><span class="pre">SpinSlider</span></tt>) e lo abbiamo dotato di un evento personalizzato (<tt class="docutils literal"><span class="pre">EVT_SPINSLIDER</span></tt>) per informare il mondo esterno dei suoi cambiamenti di stato, è tempo di passare al gradino successivo.</p>
+<p>La classe <tt class="docutils literal"><span class="pre">SliderPanel</span></tt> rappresenta un widget per manipolare le componenti di un colore. Presenta pertanto tre <tt class="docutils literal"><span class="pre">SpinSlider</span></tt> affiancati (uno per ciascun canale), oltre ad alcuni elementi accessori: un&#8217;etichetta per il titolo del colore rappresentato, e un rettangolo colorato (un semplice <tt class="docutils literal"><span class="pre">wx.Panel</span></tt>, in realtà) che mostra il colore scelto:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">SliderPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">40</span><span class="p">))</span>
+        <span class="n">comp_1</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">comp_2</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">comp_3</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">(</span><span class="n">comp_1</span><span class="p">,</span> <span class="n">comp_2</span><span class="p">,</span> <span class="n">comp_3</span><span class="p">)</span>
+
+        <span class="c"># etc. etc.</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_spinslider</span><span class="p">)</span>
+
+    <span class="c"># etc. etc.</span>
+
+    <span class="k">def</span> <span class="nf">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ctl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">):</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">GetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">]</span>
+
+    <span class="c"># etc. etc.</span>
+</pre></div>
+</div>
+<p>Il metodo <tt class="docutils literal"><span class="pre">__init__</span></tt> è del tutto prevedibile. Spiccano le righe:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">comp_1</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="n">comp_2</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="n">comp_3</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>in cui creiamo i nostri tre SpinSlider affiancati, e la riga:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_spinslider</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>dove intercettiamo l&#8217;<tt class="docutils literal"><span class="pre">EVT_SPINSLIDER</span></tt> che (ormai lo sappiamo) viene emesso quando uno SpinSlider è modificato.
+Si noti anche la variabile di convenienza <tt class="docutils literal"><span class="pre">self.components</span></tt>, che ci sarà utile per iterare sui tre SpinSlider (cosa che dovremo fare molto spesso).</p>
+<p>Anche i consueti metodi &#8220;di servizio&#8221; (<tt class="docutils literal"><span class="pre">SetMin</span></tt>, <tt class="docutils literal"><span class="pre">SetMax</span></tt>, etc. etc.) sono del tutto ordinari: ricalcano l&#8217;interfaccia già collaudata di SpinSlider, e in un certo senso la moltiplicano per tre. Infatti adesso i metodi <tt class="docutils literal"><span class="pre">Set*</span></tt> accettano una tupla di tre valori, e i metodi <tt class="docutils literal"><span class="pre">Get*</span></tt> restituiscono una tupla di tre valori.</p>
+<p>Avremmo potuto separare i getter e i setter per ciascun canale (e scrivere metodi come <tt class="docutils literal"><span class="pre">SetComp1Value</span></tt>, <tt class="docutils literal"><span class="pre">SetComp2Value</span></tt>, etc), ma abbiamo trovato due buone ragioni per non farlo. La prima è che ci metteremmo contro la consueta interfaccia di wx.Python (&#8220;GetValue&#8221;, &#8220;SetValue&#8221;, etc.). La seconda è che comunque non avrebbe senso, perché un colore in wx.Python è rappresentato da una classe <tt class="docutils literal"><span class="pre">wx.Colour</span></tt> che non ha getter e setter separati per ciascun canale: per esempio, non esiste <tt class="docutils literal"><span class="pre">wx.Colour.SetRed</span></tt>.
+Di conseguenza prevediamo che l&#8217;uso più normale che faremo del nostro SliderPanel sarà, per esempio, qualcosa come:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">my_sliderpanel</span> <span class="o">=</span> <span class="n">SliderPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="c"># e, piu&#39; avanti nel codice...</span>
+<span class="n">colour</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="n">my_sliderpanel</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span> <span class="c"># spacchettamento di tupla!</span>
+</pre></div>
+</div>
+<p>E dunque non avrebbe molto senso separare i getter e i setter per ciascun canale, per poi ritrovarsi a scrivere filastrocche come:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">my_sliderpanel</span> <span class="o">=</span> <span class="n">SliderPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="n">colour</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="n">my_sliderpanel</span><span class="o">.</span><span class="n">GetComp1Value</span><span class="p">(),</span>
+                   <span class="n">my_sliderpanel</span><span class="o">.</span><span class="n">GetComp2Value</span><span class="p">(),</span>
+                   <span class="n">my_sliderpanel</span><span class="o">.</span><span class="n">GetComp3Value</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Una parola a parte merita <tt class="docutils literal"><span class="pre">SetTitleLabel</span></tt>, metodo nuovo che abbiamo creato apposta per cambiare l&#8217;etichetta del titolo dello SliderPanel, dato che <tt class="docutils literal"><span class="pre">SetLabel</span></tt> deve restare riservato per le etichette dei tre singoli SpinSlider.</p>
+</div>
+<div class="section" id="l-evt-spinslider-si-propaga-allo-sliderpanel">
+<h2>1.4. L&#8217;EVT_SPINSLIDER si propaga allo SliderPanel.<a class="headerlink" href="#l-evt-spinslider-si-propaga-allo-sliderpanel" title="Permalink to this headline">¶</a></h2>
+<p>E che fine ha fatto l&#8217;<tt class="docutils literal"><span class="pre">EVT_SPINSLIDER</span></tt>? E&#8217; intercettato opportunamente, e gestito dal metodo <tt class="docutils literal"><span class="pre">_on_spinslider</span></tt>: qui ci limitiamo ad aggiornare il colore del riquadro di anteprima:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">_on_spinslider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+    <span class="c"># evt.Skip() # propagare o non propagare?</span>
+</pre></div>
+</div>
+<p>Noterete che per conoscere il colore attuale ci serviamo della chiamata <tt class="docutils literal"><span class="pre">self.GetValue()</span></tt>, perché (come già spiegato) non ci interessa sapere quale dei tre componenti è stato appena modificato. Per questa ragione, raccogliamo l&#8217;<tt class="docutils literal"><span class="pre">EVT_SPINSLIDER</span></tt> senza interessarci da quale dei tre SpinSlider proviene.</p>
+<p>Ma c&#8217;è un&#8217;altra considerazione che vale la pena di approfondire. Alla fine di <tt class="docutils literal"><span class="pre">_on_spinslider</span></tt>, secondo lo schema già visto, dovremmo chiamare <tt class="docutils literal"><span class="pre">evt.Skip()</span></tt> per permettere all&#8217;evento di propagarsi ulteriormente.
+Tuttavia, nel componente di ordine superiore noi adotteremo una strategia diversa (e vedremo anche perché!), per cui non abbiamo bisogno che qui l&#8217;evento si propaghi ulteriormente.</p>
+<p><tt class="docutils literal"><span class="pre">evt.Skip()</span></tt> resta però necessario, in generale, se si vuole che l&#8217;evento si propaghi (per questo motivo ho lasciato la riga, commentata, come promemoria). Basta aggiungere la chiamata a <tt class="docutils literal"><span class="pre">evt.Skip()</span></tt>, e il nostro SliderPanel emetterà (o meglio, propagherà) un <tt class="docutils literal"><span class="pre">EVT_SPINSLIDER</span></tt> ogni volta che uno dei suoi cursori viene mosso.
+Ora, fermiamoci un momento a riflettere: questo sarebbe un bene? Beh, forse <em>no</em>!</p>
+<p>Prima di tutto sarebbe strano che un componente &#8220;di ordine superiore&#8221; continuasse a emettere un evento tipico di uno dei suoi componenti interni (se non altro per il nome <tt class="docutils literal"><span class="pre">EVT_SPINSLIDER</span></tt>, che non richiama &#8220;SliderPanel&#8221;). Ma soprattutto, se noi dall&#8217;esterno chiamassimo <tt class="docutils literal"><span class="pre">event.GetId()</span></tt>, non avremo l&#8217;ID dello SliderPanel, ma quello di uno dei suoi componenti (a cui non si avrebbe nemmeno il diritto di accedere direttamente, secondo una sana logica OOP).</p>
+<p>Non bisogna sottovalutare questo problema. Se volessimo distribuire il nostro SliderPanel, qualcuno potrebbe voler usare l&#8217;ID dell&#8217;evento, e si troverebbe con un valore inaspettato. Se vogliamo che l&#8217;evento si propaghi, allora è nostra responsabilità &#8220;camuffarlo&#8221; opportunamente:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">_on_spinslider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="c"># bla, bla, bla, e poi:</span>
+    <span class="n">evt</span><span class="o">.</span><span class="n">SetId</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span> <span class="c"># un cambio d&#39;abito necessario!</span>
+    <span class="n">evt</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Prima di lasciarlo propagare, cambiamo l&#8217;ID dell&#8217;evento, e lo impostiamo su quello dello SliderPanel. Così facendo risolviamo il problema della divulgazione dell&#8217;ID dei componenti interni. Vero è che, tuttavia, in questo modo perdiamo anche ogni riferimento a quale componente di colore è stata effettivamente cambiata: una volta che lo SliderPanel lascia propagare l&#8217;evento, al mondo esterno sembrerà che lo abbia emesso lui stesso, e sarà impossibile ricostruire da quale dei tre SpinSlider l&#8217;evento ha effettivamente avuto origine.</p>
+<p>Come ho detto anche sopra, questo non mi sembra comunque un problema: nel mondo reale, quando manipoliamo i colori abbiamo sempre bisogno di tutte e tre le componenti, e non ci importa sapere quale esattamente è cambiata.</p>
+<p>Se però invece volete a ogni costo mantenere traccia dello SpinSlider specifico che ha scatenato per primo l&#8217;evento, non vi resta che tagliare la testa al toro: scrivete un secondo evento personalizzato, chiamatelo per esempio <tt class="docutils literal"><span class="pre">EVT_SLIDERPANEL</span></tt> (così risolvete anche il problema estetico del nome inadeguato), e fatelo partire proprio alla fine di <tt class="docutils literal"><span class="pre">_on_spinslider</span></tt>, invece di propagare il vecchio evento. In questo modo il vecchio evento morirà definitivamente, al suo posto ne verrà lanciato uno nuovo, con un nome migliore e l&#8217;ID giusto, e voi avrete anche la possibilità di trasmettere (in una variabile aggiuntiva) ogni informazione che desiderate circa quale componente è davvero cambiata.
+Vi lascio tutto questo come esercizio, e noi invece andiamo avanti al prossimo passaggio di questo tutorial.</p>
+</div>
+<div class="section" id="maincolorconfront-uniamo-tutto-nella-finestra-principale">
+<h2>1.5. MainColorConfront: uniamo tutto nella finestra principale.<a class="headerlink" href="#maincolorconfront-uniamo-tutto-nella-finestra-principale" title="Permalink to this headline">¶</a></h2>
+<p>Siamo arrivati alla stazione conclusiva, la classe <tt class="docutils literal"><span class="pre">MainColorConfront</span></tt> che rappresenta la finestra principale della nostra applicazione. Grazie a tutto il lavoro fatto finora, questa classe può essere molto corta e semplice: basta affiancare due <tt class="docutils literal"><span class="pre">SliderPanel</span></tt>, inizializzarli (con i vari <tt class="docutils literal"><span class="pre">SetMin</span></tt>, <tt class="docutils literal"><span class="pre">SetMax</span></tt>, etc. che abbiamo opportunamente definito), e aggiungere una parte in basso (un <tt class="docutils literal"><span class="pre">wx.ComboBox</span></tt> e un pulsante) per la selezione e l&#8217;apertura delle varie tavole di confronto.</p>
+<p>Per quanto riguarda quest&#8217;utima parte, ce ne occuperemo meglio nella prossima sezione di questo tutorial. Per il momento vi basti sapere che <tt class="docutils literal"><span class="pre">getAvailableTables()</span></tt> (chiamata inizializzando il ComboBox) restituisce una lista dei nomi delle tavole di confronto, e che <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt> (chiamata nel gestore dell&#8217;<tt class="docutils literal"><span class="pre">EVT_BUTTON</span></tt>) è appunto la tavola di confronto da aprire.</p>
+</div>
+<div class="section" id="l-evt-spinslider-arriva-finalmente-a-destinazione">
+<h2>1.6. L&#8217;EVT_SPINSLIDER arriva finalmente a destinazione.<a class="headerlink" href="#l-evt-spinslider-arriva-finalmente-a-destinazione" title="Permalink to this headline">¶</a></h2>
+<p>Ed eccoci all&#8217;ultimo atto della complessa vicenda del nostro evento personalizzato. Vi ricordate? Avremmo potuto lasciar propagare l&#8217;evento dallo <tt class="docutils literal"><span class="pre">SliderPanel</span></tt> (chiamando <tt class="docutils literal"><span class="pre">event.Skip()</span></tt> nel gestore). Se avessimo fatto così, adesso ci basterebbe raccoglierlo in questo modo:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_color_changed</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Tuttavia nella nostra finestra principale ci sono ben <em>due</em> <tt class="docutils literal"><span class="pre">SliderPanel</span></tt>, e quindi avremmo avuto il problema di discriminare, nel gestore <tt class="docutils literal"><span class="pre">on_color_changed</span></tt>, da quale dei due proviene l&#8217;evento. Intendiamoci, è un problema facile, se abbiamo avuto l&#8217;accortezza di re-impostare l&#8217;ID prima di lasciarlo propagare.</p>
+<p>Tuttavia abbiamo preferito un&#8217;altra soluzione, un po&#8217; per motivi didattici, e un po&#8217; perché ci sembra più elegante.
+Invece di collegare genericamente la finestra principale (<tt class="docutils literal"><span class="pre">self</span></tt>) all&#8217;evento, colleghiamo direttamente i due SliderPanel, in modo separato, e con due gestori separati:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_color_1_changed</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_color_2_changed</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Questo elimina alla radice il problema di stabilire da dove arriva l&#8217;evento: ma attenzione all&#8217;effetto collaterale imprevisto!</p>
+<p>Avendo collegato il nostro gestore (<tt class="docutils literal"><span class="pre">on_color_X_changed</span></tt>) direttamente allo SliderPanel, abbiamo anche cambiato l&#8217;ordine di propagazione. Adesso il nostro gestore verrà eseguito <em>subito</em>, al posto del gestore originario (<tt class="docutils literal"><span class="pre">SliderPanel._on_spinslider</span></tt>, ricordate?). E quindi, dobbiamo chiamare opportunamente <tt class="docutils literal"><span class="pre">Skip()</span></tt> alla fine di <tt class="docutils literal"><span class="pre">on_color_X_changed</span></tt>, altrimenti la propagazione si arresta e il gestore originario non verrà mai eseguito (provare per credere)!</p>
+<p>Sta a voi decidere quale delle due tecniche preferite. L&#8217;importante è capire la differenza.</p>
+<p>Che cosa succede, infine, nei due gestori <tt class="docutils literal"><span class="pre">on_color_X_changed</span></tt>? A parte la chiamata a <tt class="docutils literal"><span class="pre">Skip()</span></tt>, le cui ragioni sono state appena spiegate, non facciamo nient&#8217;altro che mandare un messaggio di &#8220;colore cambiato&#8221; a tutti quelli che eventualmente sono interessati. Approfondiremo questa tecnica nella terza parte di questo tutorial, quindi per il momento pazientate ancora. Adesso è il momento di scoprire come funzionano le finestre secondarie, ossia le tavole di confronto.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1. Costruire la finestra principale dell&#8217;applicazione.</a><ul>
+<li><a class="reference internal" href="#spinslider-il-componente-base">1.1. SpinSlider: il componente-base.</a></li>
+<li><a class="reference internal" href="#spinsliderevent-un-evento-personalizzato-per-lo-spinslider">1.2. SpinSliderEvent: un evento personalizzato per lo SpinSlider.</a></li>
+<li><a class="reference internal" href="#sliderpanel-un-widget-composto-per-rappresentare-un-colore">1.3. SliderPanel: un widget composto per rappresentare un colore.</a></li>
+<li><a class="reference internal" href="#l-evt-spinslider-si-propaga-allo-sliderpanel">1.4. L&#8217;EVT_SPINSLIDER si propaga allo SliderPanel.</a></li>
+<li><a class="reference internal" href="#maincolorconfront-uniamo-tutto-nella-finestra-principale">1.5. MainColorConfront: uniamo tutto nella finestra principale.</a></li>
+<li><a class="reference internal" href="#l-evt-spinslider-arriva-finalmente-a-destinazione">1.6. L&#8217;EVT_SPINSLIDER arriva finalmente a destinazione.</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Introduzione</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="parte_2.html"
+                        title="next chapter">2. Le tavole di confronto.</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/parte_1.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="parte_2.html" title="2. Le tavole di confronto."
+             >next</a></li>
+        <li class="right" >
+          <a href="intro.html" title="Introduzione"
+             >previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Riccardo Polignieri.
+      Last updated on Dec 01, 2011.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

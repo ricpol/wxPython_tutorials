@@ -1,0 +1,210 @@
+
+3. Il sistema di messaggi tra i componenti del programma.
+=========================================================
+
+Dopo aver visto nel dettaglio il funzionamento dei vari componenti, in questa terza parte del tutorial capiremo come metterli in comunicazione tra loro. 
+
+Diciamo subito che la soluzione adottata è il pattern OOP noto come **publish/subscriber** (o come "observer", anche se in effetti ci sono differenze implementative tra i due), e proveremo a spiegare prima come funziona in teoria. 
+
+
+3.1. Il pattern publish/subscriber.
+-----------------------------------
+
+La comunicazione tra i vari componenti è l'aspetto fondamentale della programmazione OOP. E' relativamente facile scrivere una classe che funziona "da sola". Ma quando c'è da interagire con altri oggetti, se non si fa attenzione si ricade nell'errore di accoppiare troppo strettamente le varie parti - che è poi il problema principale che l'OOP cerca appunto di risolvere. 
+
+Il pattern noto come "publish/subscriber" (**pub/sub**) presenta uno schema di comunicazione in cui tutte le parti in gioco non interagiscono direttamente, e non sanno anzi nemmeno se esiste qualcuno al di fuori. In pratica tutti si fidano di un oggetto "intermediario": quando qualcuno desidera inviare un messaggio, chiede all'intermediario di farlo per lui. All'inverso, chiunque può rivolgersi all'intermediario per "fare un abbonamento" all'ascolto dei messaggi. L'intermediario, ogni volta che riceve un messaggio da qualcuno, si preoccupa di trasmetterlo a tutti gli abbonati. 
+
+In questo modo tutti hanno bisogno di conoscere soltanto l'intermediario, e non hanno bisogno di sapere altro. Anzi, come vedremo, a rigore occorre conoscere l'intermediario solo se si vuole trasmette; per ricevere soltanto, non è necessario (a patto però che tu trovi qualcuno disposto a procurarti un abbonamento). E' solo l'intermediario che mantiene al suo interno una lista di tutti gli abbonati: ma non ha bisogno di condividerla con nessuno, perché il suo mestiere consiste solo nel ricevere e trasmettere i messaggi.
+
+Pub/sub è un pattern che si presta particolarmente bene a un sistema "broadcasting", ossia di comunicazione da uno a molti. Chi emette il messaggio non ha modo di sapere quanti lo riceveranno (eventualmente anche nessuno). Viceversa, chi riceve il messaggio potrebbe anche non sapere da dove viene: tutto quello che gli interessa è il messaggio in sé, non il mittente (certo, è possibile naturalmente inserire una "firma" del mittente tra i dati del messaggio, ma non è obbligatorio e anzi, in qualche modo viola lo spirito del pattern). 
+
+
+3.2. Una semplice implementazione di pub/sub.
+---------------------------------------------
+
+Ecco una implementazione *molto* semplice, giusto per fissare le idee (non usatela tale e quale in produzione!)::
+
+  class Intermediario:
+      def __init__(self):
+          self._elenco_abbonati = set()
+      
+      def abbona(self, abbonato):
+          self._elenco_abbonati.add(abbonato)
+      
+      def disdici(self, abbonato):
+          try: 
+              self._elenco_abbonati.remove(abbonato)
+          except KeyError: 
+              pass
+      
+      def pubblica(self, messaggio):
+          for abbonato in self._elenco_abbonati:
+              abbonato(messaggio)
+            
+            
+  class A:
+      def __init__(self, intermediario):
+          self._intermediario = intermediario
+          
+      def saluta(self):
+          self._intermediario.pubblica('Hello world!')
+        
+        
+  class B:
+      def __init__(self, intermediario):
+          self._intermediario = intermediario
+        
+      def fai_abbonamento(self):
+          self._intermediario.abbona(self.ascolta)
+        
+      def cancella_abbonamento(self):
+          self._intermediario.disdici(self.ascolta)
+        
+      def ascolta(self, messaggio):
+          print 'Sono "B", e ho ricevuto questo messaggio:', messaggio
+        
+
+  interm = Intermediario()
+
+  b = B(interm)
+  b.fai_abbonamento()
+
+  a = A(interm)
+  a.saluta()  # produce: Sono "B", e ho ricevuto questo messaggio: Hello world!
+
+  b.cancella_abbonamento()
+  a.saluta()  # produce: niente, nessuno riceve il messaggio!
+
+Il cuore del sistema, ovviamente, è la classe ``Intermediario``. Essa mantiene al suo interno una lista di abbonati, e ha un'interfaccia pubblica (``abbona`` e ``disdici``) per manipolare la lista. 
+Infine ha un metodo ``pubblica`` che si occupa effettivamente di consegnare a ciascun abbonato il messaggio del momento. 
+
+La semplicità del metodo ``pubblica`` è ingannevole, e nasconde un dettaglio importante: la "consegna" del messaggio consiste in effetti nel *chiamare* l'abbonato, passandogli come *unico* argomento il messaggio in questione (è possibile naturalmente scrivere altre implementazioni: scelgo questa, perché è quella che poi useremo realmente). Questo vuol dire che chi si abbona non può essere "uno qualsiasi": in realtà possiamo abbonare solo oggetti dalle caratteristiche ben precise. 
+
+Primo, è possibile abbonare solo un oggetto *chiamabile* (un "callable", nel gergo). Non possiamo abbonare una lista, o una stringa, o un numero. Possiamo però abbonare una funzione, o una funzione interna a una classe (ossia un metodo), o persino una classe stessa, se è dotata di un opportuno metodo ``__call__``.
+
+Secondo, è necessario che l'oggetto che abboniamo sia chiamabile con *un solo argomento* (che sarà appunto riservato al messaggio da ricevere). Se l'abbonato è chiamabile con più o meno di un argomento, ``Intermediario.pubblica`` semplicemente fallisce.
+
+Notate per inciso che ``Intermediario.abbona`` dovrebbe fare qualche controllo per stabilire se chi si vuole abbonare ha le caratteristiche giuste. Ma questa è un'implementazione semplice, a scopo esplicativo (vi avevo detto di non usarla in produzione!), e quindi non ci preoccupiamo. 
+
+Una volta capito come funziona ``Intermediario``, il suo utilizzo è semplice. La classe ``A``, che vuole pubblicare un messaggio, non deve far altro che utilizzare l'apposito metodo ``pubblica``. D'altra parte la classe ``B``, che vuole mettersi in ascolto dei messaggi, deve possedere un metodo con le caratteristiche giuste (``B.ascolta``), e abbonarlo (proceduta eseguita da ``B.abbonati``). 
+
+A rigore però non è necessario che ``B`` possegga delle procedure interne per l'abbonamento. Basta che abbia un metodo con le caratteristiche giuste, e potrebbe ricevere l'abbonamento anche dall'esterno della classe. Qualcosa come::
+
+  interm.abbona(b.ascolta) # chiamato da qualsiasi punto esterno a B
+  
+E di conseguenza, se tutto ciò che ``B`` vuole fare è mettersi in ascolto dei messaggi, non è neppure necessario che conservi al suo interno un riferimento a ``Intermediario``. Naturalmente invece, se ``B`` volesse anche pubblicare, dovrebbe invece conoscere ``Intermediario``.
+
+Attenzione, infine, a un aspetto cruciale: ci dovrebbe essere sempre **una sola istanza** di ``Intermediario`` in giro, alla quale tutti gli altri oggetti si rivolgono per comunicare. E' per questo che abbiamo *prima* creato una istanza di ``Intermediario`` al livello più alto del codice, e *poi* l'abbiamo passata come argomento all'``__init__`` di tutti gli oggetti che vogliono farne uso. 
+
+
+3.3. wx.lib.pubsub: un'implementazione completa di pub/sub.
+-----------------------------------------------------------
+
+wxPython mette a disposizione, bell'e pronta, un'implementazione del pattern pub/sub molto più completa e sicura di quella che abbiamo appena scritto. Quindi vale la pena di usarla! Tra l'altro, si tratta di una libreria completamente indipendente dal resto del framework, e quindi si può usare anche in progetti non strettamente legati al mondo wx.
+
+Per lavorare con questa versione di pub/sub, non dobbiamo far altro che importare::
+
+  from wx.lib.pubsub import Publisher
+
+Questo ci mette a disposizione la classe ``Publisher``, una versione molto più furba del nostro ``Intermediario``. 
+
+Prima di tutto, ``Publisher`` è implementata come Singleton: significa che può esserci solo una istanza di ``Publisher`` in giro per il nostro programma. Questo ci risparmia la noia di creare noi stessi una prima istanza, e poi passarla in giro (come argomento dell'``__init__``) tra gli oggetti che vogliono usarla. Adesso, molto semplicemente, se un oggetto vuole usare ``Publisher``, non deve fare altro che... chiamarlo! Infatti, ogni volta che si chiama ``Publisher()``, si è sicuri di ottenere sempre la *stessa* istanza, appunto perché ``Publisher`` è un Singleton. 
+
+In secondo luogo, ``Publisher`` conserva il suo "elenco degli abbonati" come una lista di weak references. Questo ci risparmia il disturbo di disdire prima l'abbonamento di un oggetto che vogliamo distruggere (altrimenti il riferimento esistente dentro la lista degli abbonati non ci permetterebbe di distruggerlo!). E d'altra parte, quando distruggiamo un oggetto abbonato, ``Publisher`` se ne accorge e lo rimuove automaticamente dalla sua lista. 
+
+(Nota. "Singleton" è uno dei pattern più noti e abusati della programmazione OOP. Se non avete idea di che cos'è, basta cercare in rete e troverete abbastanza implementazioni da riempire uno scaffale. Invece, se non sapete che cosa sono e come funzionano le weak references, potete leggere la documentazione del modulo ``weakref`` della libreria standard di Python).
+
+In terzo luogo, ``Publisher`` è in grado di differenziare i messaggi per "argomento" (topic): quando si pubblica un messaggio, si deve specificare anche il suo topic. E d'altra parte, è possibile abbonarsi anche solo a certi topic (un po' come la pay-tv). Così ``Publisher`` può gestire le comunicazioni di oggetti diversi in ambiti diversi, senza obbligare gli abbonati ad ascoltare tutto il traffico dei messaggi e selezionare quelli che interessano. 
+
+Ma c'è anche di più: è possibile creare delle gerarchie di topic, per esempio 
+
+ * "notizie"
+ * "notizie.sport"
+ * "notizie.politica"
+ * "notizie.spettacolo"
+
+In questo modo, chi si abbona a "notizie.politica" riceverà solo i messaggi con topic "notizie.politica". Chi invece si abbona a "notizie" riceverà *tutti* i messaggi (quelli del topic più generale, e quelli di tutti i sotto-topic). 
+
+Per sapere tutti i dettagli di ``wx.lib.pubsub`` vi rimando alla sua documentazione on-line, che trovate qui: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX. A noi basta invece questa panoramica, e passiamo senz'altro a vedere come si può usare ``Publisher`` nel nostro caso. 
+
+
+3.4. Aggiungere un sistema pub/sub al nostro programma.
+-------------------------------------------------------
+
+Torniamo al nostro piccolo programma. E' chiaro che si tratta di una situazione ideale per il pattern pub/sub. Infatti abbiamo da una parte una finestra-madre, che potrebbe pubblicare messaggi circa il cambiamento di colore imposto dall'utente; e dall'altra, una quantità imprecisata di finestre-figlie che dovrebbero restare in ascolto dei messaggi, e adeguarsi man mano che li ricevono. 
+
+La cosa bella del pattern pub/sub è che possiamo preoccuparci dei due problemi (la pubblicazione e la ricezione) in modo del tutto indipendente. Per prima cosa, vediamo come pubblicare i messaggi. Poi decideremo come e chi li deve ricevere. 
+
+Iniziamo a determinare che, siccome ci sono due colori che possono essere cambiati, avremo bisogno di due topic. Tuttavia, a scopo dimostrativo, introdurremo anche un terzo topic, più generale degli altri due. I topic sono delle semplici stringhe di testo: conviene memorizzarle come costanti a livello di modulo::
+
+  TOPIC_ROOT = 'color_change' # il topic piu' generale di cui abbiamo bisogno
+  TOPIC_COL1 = 'col1_changed' # il topic sul cambiamento del colore 1
+  TOPIC_COL2 = 'col2_changed' # il topic sul cambiamento del colore 2
+
+Quindi, per esempio, un messaggio che segnala il cambiamento del colore 1 avrà come topic ``(TOPIC_ROOT, TOPIC_COL1)``. Un ascoltatore interessato solo ai cambiamenti del colore 1 dovrebbe abbonarsi a ``TOPIC_COL1``, mentre chi è interessato ai cambiamenti di *qualsiasi* colore può abbonarsi a ``TOPIC_ROOT``. 
+
+Nella classe che definisce la nostra finestra principale, ``MainColorConfront``, noi avevamo già definito due gestori degli eventi che corrispondono al cambiamento dei due colori. Ecco il momento di esaminare che cosa succede lì::
+
+  def on_color_1_changed(self, evt):
+      Publisher().sendMessage((TOPIC_ROOT, TOPIC_COL1), self.color_1.GetValue())
+      evt.Skip()
+    
+  def on_color_2_changed(self, evt):
+      Publisher().sendMessage((TOPIC_ROOT, TOPIC_COL2), self.color_2.GetValue())
+      evt.Skip()
+
+Come si vede, nei due gestori non dobbiamo fare altro che chiamare un ``Publisher()`` (che è sempre lo stesso, perché come sappiamo è un Singleton!), e fargli inviare un messaggio. Il metodo ``sendMessage`` accetta due argomenti: il primo è il topic (una tupla di stringhe va benissimo), e il secondo contiene il messaggio vero e proprio, che può essere qualunque cosa. Nel nostro caso, basta inviare come messaggio la tupla RGB corrispondente al colore cambiato (``self.color_X.GetValue()``, appunto). 
+
+
+3.5. Ascoltare i messaggi inviati.
+----------------------------------
+
+Inviare i messaggi è decisamente semplice: adesso vediamo invece come riceverli. Per prima cosa bisogna preoccuparsi di "abbonare" le varie tavole di confronto all'ascolto dei messaggi. Una procedura molto comune è effettuare l'abbonamento al momento della creazione (ossia nell'``__init__``), e poi non pensarci più; ma noi vogliamo poter sottoscrivere e disdire un abbonamento quando ci fa comodo, e per questo abbiamo già predisposto un pulsante apposta, e un gestore collegato al pulsante::
+
+  # in ConfrontWindow:
+  def on_connect(self, evt):
+      if self.connect_button.GetValue():
+          Publisher().subscribe(self.area._listener, TOPIC_ROOT)
+      else:
+          Publisher().unsubscribe(self.area._listener)
+
+Qui, a seconda che il pulsante sia premuto o rilasciato, sottoscriviamo o annulliamo l'abbonamento. Ancora una volta, evochiamo ``Publisher()``, sicuri che tanto sarà sempre lo stesso, e chiamiamo i suoi metodi ``subscribe`` oppure ``unsubscribe``.
+
+Siccome le varie tavole di confronto sono interessate ad ascoltare i messaggi relativi a entrambi i colori, la sottoscrizione è fatta per il topic più generale ``TOPIC_ROOT``. L'oggetto preciso che sottoscriviamo, ``area._listener``, è in effetti un metodo (quindi un "callable") dell'area di confronto interna alla ``ConfrontWindow``. 
+
+Non ci resta quindi che garantire che ``area._listener`` sia sempre presente in tutte le aree di confronto, e sia sempre chiamabile con un solo argomento. Abbiamo già garantito questo, e in un modo molto semplice: il metodo ``_listener`` appartiene alla classe-madre astratta, da cui derivano tutte le specifiche aree di confronto. In questo modo, siamo sicuri che ``_listener`` sarà sempre presente e adatto per il lavoro richiesto (a meno che qualche sottoclasse non lo sovrascriva in modo sbagliato, ma qui non possiamo farci nulla, a parte indicarlo come "privato"...). 
+
+Ed ecco che cosa succede di importante in ``_listener``::
+
+  # in BaseConfrontArea:
+  def _listener(self, msg):
+      if msg.topic[-1] == TOPIC_COL1:
+          self.change_color_1(msg.data)
+      elif msg.topic[-1] == TOPIC_COL2:
+          self.change_color_2(msg.data)
+            
+``_listener`` accetta un solo argomento, che in effetti coincide con il messaggio in arrivo. In ``xw.lib.pubsub`` i messaggi sono in effetti istanze di una semplice classe ``Message``, ma tutto ciò che dobbiamo sapere è che possiamo recuperare il topic del messaggio con l'attributo ``Message.topic``, e il contenuto del messaggio sta invece nell'attributo ``Message.data``. 
+
+Come si vede, parsiamo il topic del messaggio per capire quale colore deve cambiare. Poi, passiamo il contenuto del messaggio a uno dei due metodi ``change_color_X``, che saranno implementati in modo differente nelle varie sotto-classi. 
+
+Il lavoro di frugare nel topic del messaggio per scoprire quale dei due colori sta cambiando è necessario: infatti ``_listener`` è abbonato a ``TOPIC_ROOT``, e quindi riceve sia i messaggi con ``TOPIC_COL1`` sia quelli con ``TOPIC_COL2``. Avremmo potuto fare diversamente: creare due metodi differenti, ciascuno dedicato all'ascolto di un solo tipo di messaggio::
+
+  # in ConfrontWindow:
+  def on_connect(self, evt):
+      if self.connect_button.GetValue():
+          Publisher().subscribe(self.area._listener_col1, TOPIC_COL1)
+          Publisher().subscribe(self.area._listener_col2, TOPIC_COL2)
+      else:
+          Publisher().unsubscribe(self.area._listener_col1)
+          Publisher().unsubscribe(self.area._listener_col2)
+          
+          
+  # in BaseConfrontArea:
+  def _listener_col1(self, msg):
+      self.change_color_1(msg.data)
+
+  def _listener_col2(self, msg):
+      self.change_color_2(msg.data)
+          
+E' possibile che questa seconda strada sia leggermente più veloce, e quindi preferibile se si prevede un grande numero di tavole di confronto aperte. Ma altrimenti è solo una questione di gusti.
+

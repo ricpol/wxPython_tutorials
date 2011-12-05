@@ -1,0 +1,249 @@
+
+2. Le tavole di confronto.
+==========================
+
+Questa seconda parte del tutorial esamina il modulo ``confront_area.py``, dove creiamo le finestre secondarie dell'interfaccia. 
+Anche in questo caso ci poniamo il problema di strutturare il nostro codice in modo da **separare i diversi componenti**, renderli "montabili" e "smontabili" tra loro come pezzi di Lego. Useremo però delle tecniche differenti da quelle che abbiamo visto finora (altrimenti il tutorial diventerebbe noioso!). 
+
+Iniziamo a definire il problema. Vogliamo creare "tavole di confronto", ossia piccole finestre secondarie (useremo dei ``wx.MiniFrame`` per l'aspetto complessivo) che si aprono dalla finestra principale del programma. 
+
+Ogni tavola è diversa: nel nostro tutorial ce ne sono tre, ma potrebbero essere di più; anzi, sarebbe un'ottima cosa strutturare il nostro codice in modo da poter aggiungere facilmente nuovi modelli di tavola in futuro. 
+
+La soluzione più ovvia è creare una classe separata per ciascun modello: ma già prima di buttar giù una singola riga di codice capiamo che non è la la cosa giusta. Infatti ci saranno per forza alcune parti comuni a tutti i modelli, che converrà **fattorizzare**. Per esempio, vogliamo che le tavole abbiano un pulsante "connetti/disconnetti", con la relativa routine di connessione/disconnessione. Non possiamo ripetere questo codice tale e quale in tutte le classi. 
+
+Ci sono grosso modo due strade per risolvere questo tipo di problemi: la prima è il **sotto-classamento**: scriviamo una classe-madre con gli elementi comuni, e poi tante classi-figlie, ciascuna con gli elementi specifici di un modello particolare di tavola. La seconda strada è la **composizione** di diversi pezzi. 
+Noi useremo la tecnica del sotto-classamento un po' più avanti (abbiate pazienza). Per il momento, scegliamo invece la seconda strada. 
+
+Abbiamo già usato tecniche di composizione nella prima parte del tutorial. Finora però si trattava di composizione "statica", per così dire: i componenti di ordine superiore sapevano sempre benissimo quali componenti di ordine inferiore stavano utilizzando. Adesso invece proveremo un approccio più "dinamico": il componente superiore non conosce a priori quale componente inferiore ospiterà al suo interno. 
+
+Questa tecnica presenta qualche difficoltà aggiuntiva: è inevitabile che il componente superiore "si fidi" e chiami "alla cieca" qualche metodo del componente interno. Se però quest'ultimo non ha l'interfaccia attesa, potrebbe accadere qualcosa di molto spiacevole. Python è un linguaggio grandioso, e in casi di emergenza vi mette a disposizione molti strumenti per l'introspezione; ma la regola migliore è sempre quella del "duck typing", ossia fidarsi che l'interfaccia sia quella giusta, e tenersi pronti a intercettare eventuali eccezioni. 
+
+Tuttavia c'è una tecnica ancora migliore del "duck typing": fin dove è possibile, cercate di non ficcarvi nei pasticci! 
+
+In un framework piccolo e compatto come il nostro, cercheremo di definire un'interfaccia chiara e costringeremo i vari elementi a rispettarla. Vogliamo creare un meccanismo "dinamico", ma non così tanto dinamico da darci il mal di testa. 
+
+
+2.1. ConfrontWindow: lo scheletro della tavola di confronto.
+------------------------------------------------------------
+
+Partiamo quindi dallo "scheletro" della nostra tavola di confronto: la classe ``ConfrontWindow`` racchiude gli elementi comuni: un bottone ``connect_button`` e un gestore relativo ``on_connect`` gestiscono la connessione/disconnessione della tavola (secondo un meccanismo che spiegheremo nella terza parte di questo tutorial)::
+
+  class ConfrontWindow(wx.MiniFrame):
+      def __init__(self, *args, **kwargs):
+          kwargs['style'] = wx.CAPTION|wx.SYSTEM_MENU|wx.CLOSE_BOX|wx.RESIZE_BORDER
+          area_type = kwargs.pop('area_type')
+          wx.MiniFrame.__init__(self, *args, **kwargs)
+        
+          p = wx.Panel(self)
+          self.area = getConfrontArea(p, area_type)
+          self.connect_button = wx.ToggleButton(p, -1, 'connetti')
+        
+          self.connect_button.Bind(wx.EVT_TOGGLEBUTTON, self.on_connect)
+          # etc. etc.
+        
+      def on_connect(self, evt):
+          # etc. etc. 
+
+L'elemento più interessante però è::
+
+  self.area = getConfrontArea(p, area_type)
+
+``self.area`` è la parte "incognita" ospitata all'interno della nostra tavola di confronto. Viene scelta dinamicamente a seconda dell'esito di una funzione-factory ``getConfrontArea``, che esamineremo più tardi; per il momento, basta sapere che questa funzione restituisce un componente interno, che d'ora in poi chiameremo **area di confronto** (per distinguerla da "tavola di confronto", che indica tutta la finestra). 
+
+``self.area`` viene aggiunta al layout della finestra come niente fosse, fidandosi del fatto che... si possa davvero fare così (vedremo che le aree di confronto sono in effetti dei ``wx.Panel``, quindi nessun problema). Si noti anche che nel metodo ``on_connect`` (che per il momento non dobbiamo capire) ci sono riferimenti a un'interfaccia ``self.area._listener``, di cui naturalmente dovremo garantire l'esistenza. 
+
+Riassuemendo:
+
+  * ``getConfrontArea`` dovrà restituire una "cosa" del tipo di un ``wx.Panel``, o un ``wx.Sizer``, o qualche altra cosa che può stare dentro un sizer. 
+  * dentro questa "cosa", dovrà anche esserci un metodo ``_listener``
+  
+Si tratta, come si vede, di assunzioni minime e facilmente verificabili. Stiamo mantenendo il dinamismo del nostro piccolo framework a un livello gestibile. 
+
+Non c'è altro da aggiungere sulla classe ``ConfrontWindow``. 
+E' interessante notare, per concludere, il meccanismo di istanziazione: quando l'utente, dalla finestra principale, decide di aprire una "tavola di confronto", dietro le quinte sta creando una nuova istanza *sempre della stessa classe* ``ConfrontWindow``: è il parametro aggiuntivo ``area_type`` che determina dinamicamente, attraverso la funzione-factory ``getConfrontArea``, quale *area* di confronto deve poi essere inclusa nella ``ConfrontWindow``. 
+Riguardiamo i punti essenziali del codice per capire meglio::
+
+  # in color_main.py, nel codice della finestra principale, 
+  # l'utente sceglie una 'area_type':
+  def on_open_table(self, evt):
+      fr = ConfrontWindow(self, area_type=self.table_chooser.GetValue())
+      fr.Show()
+
+  # nell'__init__ di ConfrontWindow ritroviamo 'area_type':
+  def __init__(self, *args, **kwargs):
+      area_type = kwargs.pop('area_type')
+      wx.MiniFrame.__init__(self, *args, **kwargs)
+      # ed ecco come 'area_type' determina la creazione
+      # di una area di confronto:
+      p = wx.Panel(self)
+      self.area = getConfrontArea(p, area_type)
+
+
+2.2. BaseConfrontArea: una classe-base astratta per le aree di confronto.
+-------------------------------------------------------------------------
+
+Ricapitoliamo: abbiamo costruito lo scheletro della nostra tavola di confronto, e, già che c'eravamo, abbiamo anche creato un piccolo meccanismo di istanziazione dinamica (che si impernia sulla funzione ``getConfrontArea``, che esamineremo più in là). 
+
+Adesso però dobbiamo ancora affrontare il cuore del nostro problema: costruire le "aree di confronto", ossia la parte più viva e specifica delle nostre tavole di confronto. 
+Anche in questo caso, notiamo che ci sono degli aspetti comuni che possiamo fattorizzare: vogliamo che tutte le aree abbiano due caselle di testo (di sola lettura) dove scrivere le coordinate RGB del colore attualmente mostrato. In secondo luogo, tutte le aree devono avere una interfaccia ``_listener`` (ricordate, lo avevamo promesso!). 
+
+Per separare gli elementi comuni dagli elementi specifici, questa volta ci serviamo della tecnica del **sub-classamento**. Scriviamo prima una classe-madre che contiene gli elementi comuni, e poi faremo delle classi-figlie per definire le specificità. La classe-madre è *astratta*, nel senso che non è concepita per essere istanziata direttamente: laggiù nel mondo reale, ci serviremo sempre di una delle sottoclassi. 
+
+Esaminiamo ``BaseConfrontArea``::
+
+  class BaseConfrontArea(wx.Panel):  
+      def __init__(self, *args, **kwargs):
+          wx.Panel.__init__(self, *args, **kwargs)
+          self.color_1 = wx.TextCtrl(self, style=wx.TE_READONLY)
+          self.color_2 = wx.TextCtrl(self, style=wx.TE_READONLY)
+        
+          s = wx.BoxSizer(wx.VERTICAL)
+          s.Add(self.specific_layout(), 1, wx.EXPAND, 0)
+          # etc. etc. 
+          self.SetSizer(s)
+          self.Fit()
+
+      def _listener(self, msg):  # accorciato...
+          if msg.topic[-1] == TOPIC_COL1:
+              self.change_color_1(msg.data)
+          elif msg.topic[-1] == TOPIC_COL2:
+              self.change_color_2(msg.data)
+    
+      def specific_layout(self): raise NotImplementedError
+    
+      def change_color_1(self, col): raise NotImplementedError
+    
+      def change_color_2(self, col): raise NotImplementedError
+
+Prima di tutto notiamo che deriva da un ``wx.Panel``, e quindi si adatterà perfettamente all'interno della ``ConfrontWindow`` cui è destinato (prima promessa mantenuta).
+
+Poi c'è un metodo ``_listener`` e questo basta a garantirci che tutte le classi-figlie lo erediteranno (seconda promessa). Questo metodo è responsabile per l'ascolto e l'interpretazione dei messaggi in arrivo: ci occuperemo nella terza parte del tutorial di questo meccanismo, ma intanto notiamo che, a seconda del tipo di messaggio, ``_listener`` deve in effetti aggiornare uno dei due colori dell'area di confronto. Ma qui c'è un intoppo: non può farlo, perché non ha nessun indizio per sapere *che cosa* sarà davvero il "colore 1" o il "colore 2" che deve essere cambiato. Ricordatevi che qui siamo in una sovra-classe astratta, ma il "che cosa" sarà poi deciso nelle sotto-classi concrete. 
+
+Ma niente panico, la soluzione è semplice: basta rimandare il problema! Di conseguenza, ``_listener`` invoca l'aiuto di due altri metodi, che chiamiamo opportunamente ``change_color_1`` e ``change_color_2``. Questo, naturalmente, equivale a fare altre due promesse che dovremo poi mantenere. 
+
+Perciò ci preoccupiamo di aggiungere i due nuovi metodi richiesti. 
+Secondo una convenzione tipica, dichiariamo che si tratta (per il momento) di interfacce astratte, sollevando un ``NotImplementedError``, e deleghiamo alle future sotto-classi il compito di realizzarle davvero. 
+
+Infine, ecco il metodo ``__init__``, che si occupa di definire il layout della parte comune dell'interfaccia. Qui creiamo le due caselle di testo che ci servivano. La parte più interessante, tuttavia, è questa::
+
+  s = wx.BoxSizer(wx.VERTICAL)
+  s.Add(self.specific_layout(), 1, wx.EXPAND, 0)
+        
+Inseriamo nel nostro sizer il risultato di un metodo ``specific_layout()``. Si tratta di un'ennesima promessa (l'ultima, però) che dovremo mantenere, perché per il momento ``specific_layout``... semplicemente non esiste! 
+
+Ma non importa: aggiungiamo subito anche ``specific_layout`` alla lista dei metodi, e marchiamolo come "astratto" con il solito metodo di sollevare un ``NotImplementedError``. Questo metodo sarà responsabile, nelle varie sotto-classi, di creare e disegnare il layout della parte specifica della tavola di confronto. 
+
+C'è comunque un particolare ulteriore: siccome il risultato di ``specific_layout`` dovrà essere inserito all'interno di un sizer, è opportuno che questo metodo restituisca un ``wx.Panel`` o un altro ``wx.Sizer``. Come sappiamo, Python non ha un meccanismo per costringere il rispetto della "signature" di una funzione: in questi casi, la cosa migliore è **specificare molto bene** quello che vogliamo nella docstring del metodo. 
+
+
+2.3. FieldsConfrontArea: un'area di confronto con due zone di colore accostate. 
+-------------------------------------------------------------------------------
+
+Adesso che la nostra classe-madre astratta è terminata, non resta che scrivere le sotto-classi concrete. In pratica, una sotto-classe concreta deve mantenere tutte le promesse fatte dalla classe-madre. Ma non sarà difficile!
+
+La prima area di confronto che scriviamo è molto semplice: ci bastano due rettangoli colorati, uno accanto all'altro. La classe ``FieldsConfrontArea`` implementa questo schema::
+
+  class FieldsConfrontArea(BaseConfrontArea):
+      def __init__(self, *args, **kwargs):
+          self.direction = kwargs.pop('direction')
+          BaseConfrontArea.__init__(self, *args, **kwargs)
+        
+      def specific_layout(self):
+          self.col1 = wx.Panel(self)
+          self.col2 = wx.Panel(self)
+
+          s = wx.BoxSizer(self.direction)
+          s.Add(self.col1, 1, wx.EXPAND)
+          s.Add(self.col2, 1, wx.EXPAND)
+          return s
+        
+      def change_color_1(self, col):
+          self.col1.SetBackgroundColour(wx.Colour(*col))
+          self.Refresh()
+        
+      def change_color_2(self, col):
+          self.col2.SetBackgroundColour(wx.Colour(*col))
+          self.Refresh()
+
+Iniziamo a osservare che, per mantenere le promesse fatte dalla classe-madre, sviluppa un metodo ``specific_layout``, in cui crea i due rettangoli, li accosta dentro un sizer, e (dettaglio fondamentale) restituisce appunto questo sizer, pronto da essere inglobato insieme al resto dell'interfaccia già specificato dalla classe-madre. 
+
+Poi implementa concretamente anche i metodi ``change_color_1`` e ``change_color_2``: in questo caso, siccome i due rettangoli sono semplicemente dei ``wx.Panel``, non dobbiamo fare altro che chiamare ``SetBackgroundColour`` e rinfrescare. 
+
+Un'ultima finezza è nell'``__init__``: separiamo un parametro aggiuntivo ``direction`` prima di invocare e passare il controllo all'``__init__`` della classe-madre. Useremo questo parametro per specificare (nel metodo ``specific_layout``) se i due rettangoli devono essere accostati in verticale o in orizzontale. 
+
+Così facendo, in pratica abbiamo ottenuto due aree di confronto al prezzo di una: senza scrivere un'altra classe apposta, ci basta cambiare valore al parametro per fare un'area di confronto differente. 
+
+
+2.4. TextOnBgConfrontArea: un'area per confrontare il colore di un testo sullo sfondo.
+--------------------------------------------------------------------------------------
+
+``TextOnBgConfrontArea`` crea un'area di confronto costituita da una casella di testo in cui è possibile scrivere qualcosa. I due colori da confrontare, in questo caso, sono quello del testo e quello dello sfondo. 
+
+Anche questa classe è corta e semplice da capire. Il metodo ``specific_layout`` è un po' più complesso, perché per l'occasione vogliamo anche aggiungere un pulsante per cambiare il font. Questo a sua volta richiede il binding dell'evento a un nuovo metodo ``on_font``, dove gestiamo i dettagli della selezione di un nuovo font. 
+
+Anche ``change_color_1`` e ``change_color_2`` devono essere implementati, tenendo conto che, questa volta, dobbiamo cambiare il colore di un ``wx.TextCtrl``.
+
+Invece, non abbiamo bisogno di fare nessuna modifica all'``__init__``: ci teniamo quello della classe-madre così com'è. 
+
+
+2.5. getConfrontArea: una funzione per la  scelta delle aree di confronto.
+--------------------------------------------------------------------------
+
+Ed eccoci arrivati alla fine: abbiamo costruito lo scheletro della nostra tavola di confronto (``ConfrontWindow``), all'interno della quale ospitiamo dinamicamente un'area di confronto. Poi abbiamo delineato una classe-madre astratta per le aree di confronto (``BaseConfrontArea``), e infine due implementazioni concrete (che valgono per tre!). 
+
+Adesso, per concludere il nostro piccolo meccanismo di creazione "dinamica" delle tavole di confronto, non ci resta che studiare un sistema per attribuire la giusta area di confronto a ``ConfrontWindow``.
+
+Partiamo con una costante a livello di modulo, che chiamiamo ``AVAILABLE_AREAS``::
+
+  AVAILABLE_AREAS = OrderedDict((
+      ('Due aree (orizzontale)', (FieldsConfrontArea, {'direction':wx.VERTICAL})),
+      ('Due aree (verticale)',   (FieldsConfrontArea, {'direction':wx.HORIZONTAL})),
+      ('Testo su sfondo',        (TextOnBgConfrontArea, {})) ,
+      ))
+
+In pratica è un registro che tiene nota di tutte le aree di confronto disponibili. Per ciascuna registriamo un titolo (una stringa di testo descrittivo), la (sotto-)classe interessata, e gli eventuali argomenti aggiuntivi con cui bisogna chiamare questa classe. 
+
+Notate che ``AVAILABLE_AREAS`` deve stare alla fine del modulo e non all'inizio, perché include dei nomi di classi che, al momento della compilazione, devono già essere stati parsati (se non vi è chiaro questo punto, provate a spostarla all'inizio del modulo, e vedrete che cosa succede...). 
+
+Noterete anche che ``AVAILABLE_AREAS`` è un ``OrderedDict``: questo è solo un dettaglio, ma serve, in pratica, per mantenere i titoli nell'ordine esatto in cui vogliamo che compaiano nel ComboBox della finestra principale dell'applicazione. 
+
+A partire da ``AVAILABLE_AREAS`` scriviamo due funzioni di convenienza: la prima, ``getAvailableTables``, restituisce semplicemente le chiavi, ed è usata dalla finestra principale per alimentare il ComboBox. 
+
+La seconda, ``getConfrontArea``, è il cuore del nostro sistema di dispatch dinamico: è una piccola factory-function che restituisce un'istanza già creata di un'area di confronto, a partire da una stringa di testo (oltre che da un primo argomento, che è semplicemente il "parent" dell'area di confronto)::
+
+  def getConfrontArea(parent, area_type):
+      area, kwargs = AVAILABLE_AREAS[area_type]
+      return area(parent, **kwargs)
+
+Per esempio, se noi la chiamiamo cosi::
+
+  area = getConfrontArea(p, 'Due aree (orizzontale)')
+  
+il risultato sarà come aver chiamato::
+
+  area = FieldsConfrontArea(p, 'direction'=wx.VERTICAL)
+
+Con questo semplice sistema (un registro ``AVAILABLE_AREAS`` e una factory ``getConfrontArea``) noi risolviamo il problema di creare la "giusta" area di confronto a seconda della scelta dell'utente. 
+
+
+2.6. Come aggiungere una nuova area di confronto.
+-------------------------------------------------
+
+A questo punto è anche facile, eventualmente, aggiungere nuovi tipi di aree di confronto, all'occorrenza. Bisogna scrivere una nuova sotto-classe di ``BaseConfrontArea``, facendo attenzione a implementare tutti i metodi richiesti. Quindi, basterà registrarla in ``AVAILABLE_AREAS`` per renderla automaticamente disponibile all'utente. 
+
+Ancora più facile è l'operazione contraria: per eliminare una tavola di confronto, basta commentare la voce relativa in ``AVAILABLE_AREAS``.
+
+
+2.7. L'interfaccia pubblica del modulo.
+---------------------------------------
+
+In definitiva, tutto il modulo ``confront_area.py`` ha un'interfaccia esterna ridottissima, grazie al nostro sforzo per mantenere il codice ben organizzato. 
+
+Il mondo esterno deve sapere solo due cose: la classe ``ConfrontWindow`` (che rappresenta, da sola, tutte le possibili tavole di confronto, presenti e future), e la piccola funzione di utilità ``getAvailableTables`` (che restituisce in modo conveniente le chiavi di ``AVAILABLE_AREAS``). 
+
+E quindi possiamo orgogliosamente dichiarare, in cima al modulo::
+
+  __all__ = ['getAvailableTables', 'ConfrontWindow']
+
+Questo ci consentirà lo stile di importazione ``from confront_area import *``, senza la preoccupazione di importare anche nomi non necessari. 
+

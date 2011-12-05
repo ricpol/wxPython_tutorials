@@ -1,0 +1,287 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>3. Il sistema di messaggi tra i componenti del programma. &mdash; tutorial wxPython-OOP</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="tutorial wxPython-OOP" href="index.html" />
+    <link rel="next" title="Conclusione." href="conclusione.html" />
+    <link rel="prev" title="2. Le tavole di confronto." href="parte_2.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="conclusione.html" title="Conclusione."
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="parte_2.html" title="2. Le tavole di confronto."
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="il-sistema-di-messaggi-tra-i-componenti-del-programma">
+<h1>3. Il sistema di messaggi tra i componenti del programma.<a class="headerlink" href="#il-sistema-di-messaggi-tra-i-componenti-del-programma" title="Permalink to this headline">¶</a></h1>
+<p>Dopo aver visto nel dettaglio il funzionamento dei vari componenti, in questa terza parte del tutorial capiremo come metterli in comunicazione tra loro.</p>
+<p>Diciamo subito che la soluzione adottata è il pattern OOP noto come <strong>publish/subscriber</strong> (o come &#8220;observer&#8221;, anche se in effetti ci sono differenze implementative tra i due), e proveremo a spiegare prima come funziona in teoria.</p>
+<div class="section" id="il-pattern-publish-subscriber">
+<h2>3.1. Il pattern publish/subscriber.<a class="headerlink" href="#il-pattern-publish-subscriber" title="Permalink to this headline">¶</a></h2>
+<p>La comunicazione tra i vari componenti è l&#8217;aspetto fondamentale della programmazione OOP. E&#8217; relativamente facile scrivere una classe che funziona &#8220;da sola&#8221;. Ma quando c&#8217;è da interagire con altri oggetti, se non si fa attenzione si ricade nell&#8217;errore di accoppiare troppo strettamente le varie parti - che è poi il problema principale che l&#8217;OOP cerca appunto di risolvere.</p>
+<p>Il pattern noto come &#8220;publish/subscriber&#8221; (<strong>pub/sub</strong>) presenta uno schema di comunicazione in cui tutte le parti in gioco non interagiscono direttamente, e non sanno anzi nemmeno se esiste qualcuno al di fuori. In pratica tutti si fidano di un oggetto &#8220;intermediario&#8221;: quando qualcuno desidera inviare un messaggio, chiede all&#8217;intermediario di farlo per lui. All&#8217;inverso, chiunque può rivolgersi all&#8217;intermediario per &#8220;fare un abbonamento&#8221; all&#8217;ascolto dei messaggi. L&#8217;intermediario, ogni volta che riceve un messaggio da qualcuno, si preoccupa di trasmetterlo a tutti gli abbonati.</p>
+<p>In questo modo tutti hanno bisogno di conoscere soltanto l&#8217;intermediario, e non hanno bisogno di sapere altro. Anzi, come vedremo, a rigore occorre conoscere l&#8217;intermediario solo se si vuole trasmette; per ricevere soltanto, non è necessario (a patto però che tu trovi qualcuno disposto a procurarti un abbonamento). E&#8217; solo l&#8217;intermediario che mantiene al suo interno una lista di tutti gli abbonati: ma non ha bisogno di condividerla con nessuno, perché il suo mestiere consiste solo nel ricevere e trasmettere i messaggi.</p>
+<p>Pub/sub è un pattern che si presta particolarmente bene a un sistema &#8220;broadcasting&#8221;, ossia di comunicazione da uno a molti. Chi emette il messaggio non ha modo di sapere quanti lo riceveranno (eventualmente anche nessuno). Viceversa, chi riceve il messaggio potrebbe anche non sapere da dove viene: tutto quello che gli interessa è il messaggio in sé, non il mittente (certo, è possibile naturalmente inserire una &#8220;firma&#8221; del mittente tra i dati del messaggio, ma non è obbligatorio e anzi, in qualche modo viola lo spirito del pattern).</p>
+</div>
+<div class="section" id="una-semplice-implementazione-di-pub-sub">
+<h2>3.2. Una semplice implementazione di pub/sub.<a class="headerlink" href="#una-semplice-implementazione-di-pub-sub" title="Permalink to this headline">¶</a></h2>
+<p>Ecco una implementazione <em>molto</em> semplice, giusto per fissare le idee (non usatela tale e quale in produzione!):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Intermediario</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_elenco_abbonati</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">abbona</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">abbonato</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_elenco_abbonati</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">abbonato</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">disdici</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">abbonato</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_elenco_abbonati</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">abbonato</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">pubblica</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messaggio</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">abbonato</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_elenco_abbonati</span><span class="p">:</span>
+            <span class="n">abbonato</span><span class="p">(</span><span class="n">messaggio</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">A</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">intermediario</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intermediario</span> <span class="o">=</span> <span class="n">intermediario</span>
+
+    <span class="k">def</span> <span class="nf">saluta</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intermediario</span><span class="o">.</span><span class="n">pubblica</span><span class="p">(</span><span class="s">&#39;Hello world!&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">B</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">intermediario</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intermediario</span> <span class="o">=</span> <span class="n">intermediario</span>
+
+    <span class="k">def</span> <span class="nf">fai_abbonamento</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intermediario</span><span class="o">.</span><span class="n">abbona</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ascolta</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">cancella_abbonamento</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intermediario</span><span class="o">.</span><span class="n">disdici</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ascolta</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">ascolta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messaggio</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&#39;Sono &quot;B&quot;, e ho ricevuto questo messaggio:&#39;</span><span class="p">,</span> <span class="n">messaggio</span>
+
+
+<span class="n">interm</span> <span class="o">=</span> <span class="n">Intermediario</span><span class="p">()</span>
+
+<span class="n">b</span> <span class="o">=</span> <span class="n">B</span><span class="p">(</span><span class="n">interm</span><span class="p">)</span>
+<span class="n">b</span><span class="o">.</span><span class="n">fai_abbonamento</span><span class="p">()</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">interm</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">saluta</span><span class="p">()</span>  <span class="c"># produce: Sono &quot;B&quot;, e ho ricevuto questo messaggio: Hello world!</span>
+
+<span class="n">b</span><span class="o">.</span><span class="n">cancella_abbonamento</span><span class="p">()</span>
+<span class="n">a</span><span class="o">.</span><span class="n">saluta</span><span class="p">()</span>  <span class="c"># produce: niente, nessuno riceve il messaggio!</span>
+</pre></div>
+</div>
+<p>Il cuore del sistema, ovviamente, è la classe <tt class="docutils literal"><span class="pre">Intermediario</span></tt>. Essa mantiene al suo interno una lista di abbonati, e ha un&#8217;interfaccia pubblica (<tt class="docutils literal"><span class="pre">abbona</span></tt> e <tt class="docutils literal"><span class="pre">disdici</span></tt>) per manipolare la lista.
+Infine ha un metodo <tt class="docutils literal"><span class="pre">pubblica</span></tt> che si occupa effettivamente di consegnare a ciascun abbonato il messaggio del momento.</p>
+<p>La semplicità del metodo <tt class="docutils literal"><span class="pre">pubblica</span></tt> è ingannevole, e nasconde un dettaglio importante: la &#8220;consegna&#8221; del messaggio consiste in effetti nel <em>chiamare</em> l&#8217;abbonato, passandogli come <em>unico</em> argomento il messaggio in questione (è possibile naturalmente scrivere altre implementazioni: scelgo questa, perché è quella che poi useremo realmente). Questo vuol dire che chi si abbona non può essere &#8220;uno qualsiasi&#8221;: in realtà possiamo abbonare solo oggetti dalle caratteristiche ben precise.</p>
+<p>Primo, è possibile abbonare solo un oggetto <em>chiamabile</em> (un &#8220;callable&#8221;, nel gergo). Non possiamo abbonare una lista, o una stringa, o un numero. Possiamo però abbonare una funzione, o una funzione interna a una classe (ossia un metodo), o persino una classe stessa, se è dotata di un opportuno metodo <tt class="docutils literal"><span class="pre">__call__</span></tt>.</p>
+<p>Secondo, è necessario che l&#8217;oggetto che abboniamo sia chiamabile con <em>un solo argomento</em> (che sarà appunto riservato al messaggio da ricevere). Se l&#8217;abbonato è chiamabile con più o meno di un argomento, <tt class="docutils literal"><span class="pre">Intermediario.pubblica</span></tt> semplicemente fallisce.</p>
+<p>Notate per inciso che <tt class="docutils literal"><span class="pre">Intermediario.abbona</span></tt> dovrebbe fare qualche controllo per stabilire se chi si vuole abbonare ha le caratteristiche giuste. Ma questa è un&#8217;implementazione semplice, a scopo esplicativo (vi avevo detto di non usarla in produzione!), e quindi non ci preoccupiamo.</p>
+<p>Una volta capito come funziona <tt class="docutils literal"><span class="pre">Intermediario</span></tt>, il suo utilizzo è semplice. La classe <tt class="docutils literal"><span class="pre">A</span></tt>, che vuole pubblicare un messaggio, non deve far altro che utilizzare l&#8217;apposito metodo <tt class="docutils literal"><span class="pre">pubblica</span></tt>. D&#8217;altra parte la classe <tt class="docutils literal"><span class="pre">B</span></tt>, che vuole mettersi in ascolto dei messaggi, deve possedere un metodo con le caratteristiche giuste (<tt class="docutils literal"><span class="pre">B.ascolta</span></tt>), e abbonarlo (proceduta eseguita da <tt class="docutils literal"><span class="pre">B.abbonati</span></tt>).</p>
+<p>A rigore però non è necessario che <tt class="docutils literal"><span class="pre">B</span></tt> possegga delle procedure interne per l&#8217;abbonamento. Basta che abbia un metodo con le caratteristiche giuste, e potrebbe ricevere l&#8217;abbonamento anche dall&#8217;esterno della classe. Qualcosa come:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">interm</span><span class="o">.</span><span class="n">abbona</span><span class="p">(</span><span class="n">b</span><span class="o">.</span><span class="n">ascolta</span><span class="p">)</span> <span class="c"># chiamato da qualsiasi punto esterno a B</span>
+</pre></div>
+</div>
+<p>E di conseguenza, se tutto ciò che <tt class="docutils literal"><span class="pre">B</span></tt> vuole fare è mettersi in ascolto dei messaggi, non è neppure necessario che conservi al suo interno un riferimento a <tt class="docutils literal"><span class="pre">Intermediario</span></tt>. Naturalmente invece, se <tt class="docutils literal"><span class="pre">B</span></tt> volesse anche pubblicare, dovrebbe invece conoscere <tt class="docutils literal"><span class="pre">Intermediario</span></tt>.</p>
+<p>Attenzione, infine, a un aspetto cruciale: ci dovrebbe essere sempre <strong>una sola istanza</strong> di <tt class="docutils literal"><span class="pre">Intermediario</span></tt> in giro, alla quale tutti gli altri oggetti si rivolgono per comunicare. E&#8217; per questo che abbiamo <em>prima</em> creato una istanza di <tt class="docutils literal"><span class="pre">Intermediario</span></tt> al livello più alto del codice, e <em>poi</em> l&#8217;abbiamo passata come argomento all&#8217;<tt class="docutils literal"><span class="pre">__init__</span></tt> di tutti gli oggetti che vogliono farne uso.</p>
+</div>
+<div class="section" id="wx-lib-pubsub-un-implementazione-completa-di-pub-sub">
+<h2>3.3. wx.lib.pubsub: un&#8217;implementazione completa di pub/sub.<a class="headerlink" href="#wx-lib-pubsub-un-implementazione-completa-di-pub-sub" title="Permalink to this headline">¶</a></h2>
+<p>wxPython mette a disposizione, bell&#8217;e pronta, un&#8217;implementazione del pattern pub/sub molto più completa e sicura di quella che abbiamo appena scritto. Quindi vale la pena di usarla! Tra l&#8217;altro, si tratta di una libreria completamente indipendente dal resto del framework, e quindi si può usare anche in progetti non strettamente legati al mondo wx.</p>
+<p>Per lavorare con questa versione di pub/sub, non dobbiamo far altro che importare:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wx.lib.pubsub</span> <span class="kn">import</span> <span class="n">Publisher</span>
+</pre></div>
+</div>
+<p>Questo ci mette a disposizione la classe <tt class="docutils literal"><span class="pre">Publisher</span></tt>, una versione molto più furba del nostro <tt class="docutils literal"><span class="pre">Intermediario</span></tt>.</p>
+<p>Prima di tutto, <tt class="docutils literal"><span class="pre">Publisher</span></tt> è implementata come Singleton: significa che può esserci solo una istanza di <tt class="docutils literal"><span class="pre">Publisher</span></tt> in giro per il nostro programma. Questo ci risparmia la noia di creare noi stessi una prima istanza, e poi passarla in giro (come argomento dell&#8217;<tt class="docutils literal"><span class="pre">__init__</span></tt>) tra gli oggetti che vogliono usarla. Adesso, molto semplicemente, se un oggetto vuole usare <tt class="docutils literal"><span class="pre">Publisher</span></tt>, non deve fare altro che... chiamarlo! Infatti, ogni volta che si chiama <tt class="docutils literal"><span class="pre">Publisher()</span></tt>, si è sicuri di ottenere sempre la <em>stessa</em> istanza, appunto perché <tt class="docutils literal"><span class="pre">Publisher</span></tt> è un Singleton.</p>
+<p>In secondo luogo, <tt class="docutils literal"><span class="pre">Publisher</span></tt> conserva il suo &#8220;elenco degli abbonati&#8221; come una lista di weak references. Questo ci risparmia il disturbo di disdire prima l&#8217;abbonamento di un oggetto che vogliamo distruggere (altrimenti il riferimento esistente dentro la lista degli abbonati non ci permetterebbe di distruggerlo!). E d&#8217;altra parte, quando distruggiamo un oggetto abbonato, <tt class="docutils literal"><span class="pre">Publisher</span></tt> se ne accorge e lo rimuove automaticamente dalla sua lista.</p>
+<p>(Nota. &#8220;Singleton&#8221; è uno dei pattern più noti e abusati della programmazione OOP. Se non avete idea di che cos&#8217;è, basta cercare in rete e troverete abbastanza implementazioni da riempire uno scaffale. Invece, se non sapete che cosa sono e come funzionano le weak references, potete leggere la documentazione del modulo <tt class="docutils literal"><span class="pre">weakref</span></tt> della libreria standard di Python).</p>
+<p>In terzo luogo, <tt class="docutils literal"><span class="pre">Publisher</span></tt> è in grado di differenziare i messaggi per &#8220;argomento&#8221; (topic): quando si pubblica un messaggio, si deve specificare anche il suo topic. E d&#8217;altra parte, è possibile abbonarsi anche solo a certi topic (un po&#8217; come la pay-tv). Così <tt class="docutils literal"><span class="pre">Publisher</span></tt> può gestire le comunicazioni di oggetti diversi in ambiti diversi, senza obbligare gli abbonati ad ascoltare tutto il traffico dei messaggi e selezionare quelli che interessano.</p>
+<p>Ma c&#8217;è anche di più: è possibile creare delle gerarchie di topic, per esempio</p>
+<blockquote>
+<div><ul class="simple">
+<li>&#8220;notizie&#8221;</li>
+<li>&#8220;notizie.sport&#8221;</li>
+<li>&#8220;notizie.politica&#8221;</li>
+<li>&#8220;notizie.spettacolo&#8221;</li>
+</ul>
+</div></blockquote>
+<p>In questo modo, chi si abbona a &#8220;notizie.politica&#8221; riceverà solo i messaggi con topic &#8220;notizie.politica&#8221;. Chi invece si abbona a &#8220;notizie&#8221; riceverà <em>tutti</em> i messaggi (quelli del topic più generale, e quelli di tutti i sotto-topic).</p>
+<p>Per sapere tutti i dettagli di <tt class="docutils literal"><span class="pre">wx.lib.pubsub</span></tt> vi rimando alla sua documentazione on-line, che trovate qui: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX. A noi basta invece questa panoramica, e passiamo senz&#8217;altro a vedere come si può usare <tt class="docutils literal"><span class="pre">Publisher</span></tt> nel nostro caso.</p>
+</div>
+<div class="section" id="aggiungere-un-sistema-pub-sub-al-nostro-programma">
+<h2>3.4. Aggiungere un sistema pub/sub al nostro programma.<a class="headerlink" href="#aggiungere-un-sistema-pub-sub-al-nostro-programma" title="Permalink to this headline">¶</a></h2>
+<p>Torniamo al nostro piccolo programma. E&#8217; chiaro che si tratta di una situazione ideale per il pattern pub/sub. Infatti abbiamo da una parte una finestra-madre, che potrebbe pubblicare messaggi circa il cambiamento di colore imposto dall&#8217;utente; e dall&#8217;altra, una quantità imprecisata di finestre-figlie che dovrebbero restare in ascolto dei messaggi, e adeguarsi man mano che li ricevono.</p>
+<p>La cosa bella del pattern pub/sub è che possiamo preoccuparci dei due problemi (la pubblicazione e la ricezione) in modo del tutto indipendente. Per prima cosa, vediamo come pubblicare i messaggi. Poi decideremo come e chi li deve ricevere.</p>
+<p>Iniziamo a determinare che, siccome ci sono due colori che possono essere cambiati, avremo bisogno di due topic. Tuttavia, a scopo dimostrativo, introdurremo anche un terzo topic, più generale degli altri due. I topic sono delle semplici stringhe di testo: conviene memorizzarle come costanti a livello di modulo:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">TOPIC_ROOT</span> <span class="o">=</span> <span class="s">&#39;color_change&#39;</span> <span class="c"># il topic piu&#39; generale di cui abbiamo bisogno</span>
+<span class="n">TOPIC_COL1</span> <span class="o">=</span> <span class="s">&#39;col1_changed&#39;</span> <span class="c"># il topic sul cambiamento del colore 1</span>
+<span class="n">TOPIC_COL2</span> <span class="o">=</span> <span class="s">&#39;col2_changed&#39;</span> <span class="c"># il topic sul cambiamento del colore 2</span>
+</pre></div>
+</div>
+<p>Quindi, per esempio, un messaggio che segnala il cambiamento del colore 1 avrà come topic <tt class="docutils literal"><span class="pre">(TOPIC_ROOT,</span> <span class="pre">TOPIC_COL1)</span></tt>. Un ascoltatore interessato solo ai cambiamenti del colore 1 dovrebbe abbonarsi a <tt class="docutils literal"><span class="pre">TOPIC_COL1</span></tt>, mentre chi è interessato ai cambiamenti di <em>qualsiasi</em> colore può abbonarsi a <tt class="docutils literal"><span class="pre">TOPIC_ROOT</span></tt>.</p>
+<p>Nella classe che definisce la nostra finestra principale, <tt class="docutils literal"><span class="pre">MainColorConfront</span></tt>, noi avevamo già definito due gestori degli eventi che corrispondono al cambiamento dei due colori. Ecco il momento di esaminare che cosa succede lì:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">on_color_1_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">((</span><span class="n">TOPIC_ROOT</span><span class="p">,</span> <span class="n">TOPIC_COL1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+    <span class="n">evt</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">on_color_2_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">((</span><span class="n">TOPIC_ROOT</span><span class="p">,</span> <span class="n">TOPIC_COL2</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+    <span class="n">evt</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Come si vede, nei due gestori non dobbiamo fare altro che chiamare un <tt class="docutils literal"><span class="pre">Publisher()</span></tt> (che è sempre lo stesso, perché come sappiamo è un Singleton!), e fargli inviare un messaggio. Il metodo <tt class="docutils literal"><span class="pre">sendMessage</span></tt> accetta due argomenti: il primo è il topic (una tupla di stringhe va benissimo), e il secondo contiene il messaggio vero e proprio, che può essere qualunque cosa. Nel nostro caso, basta inviare come messaggio la tupla RGB corrispondente al colore cambiato (<tt class="docutils literal"><span class="pre">self.color_X.GetValue()</span></tt>, appunto).</p>
+</div>
+<div class="section" id="ascoltare-i-messaggi-inviati">
+<h2>3.5. Ascoltare i messaggi inviati.<a class="headerlink" href="#ascoltare-i-messaggi-inviati" title="Permalink to this headline">¶</a></h2>
+<p>Inviare i messaggi è decisamente semplice: adesso vediamo invece come riceverli. Per prima cosa bisogna preoccuparsi di &#8220;abbonare&#8221; le varie tavole di confronto all&#8217;ascolto dei messaggi. Una procedura molto comune è effettuare l&#8217;abbonamento al momento della creazione (ossia nell&#8217;<tt class="docutils literal"><span class="pre">__init__</span></tt>), e poi non pensarci più; ma noi vogliamo poter sottoscrivere e disdire un abbonamento quando ci fa comodo, e per questo abbiamo già predisposto un pulsante apposta, e un gestore collegato al pulsante:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># in ConfrontWindow:</span>
+<span class="k">def</span> <span class="nf">on_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener</span><span class="p">,</span> <span class="n">TOPIC_ROOT</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Qui, a seconda che il pulsante sia premuto o rilasciato, sottoscriviamo o annulliamo l&#8217;abbonamento. Ancora una volta, evochiamo <tt class="docutils literal"><span class="pre">Publisher()</span></tt>, sicuri che tanto sarà sempre lo stesso, e chiamiamo i suoi metodi <tt class="docutils literal"><span class="pre">subscribe</span></tt> oppure <tt class="docutils literal"><span class="pre">unsubscribe</span></tt>.</p>
+<p>Siccome le varie tavole di confronto sono interessate ad ascoltare i messaggi relativi a entrambi i colori, la sottoscrizione è fatta per il topic più generale <tt class="docutils literal"><span class="pre">TOPIC_ROOT</span></tt>. L&#8217;oggetto preciso che sottoscriviamo, <tt class="docutils literal"><span class="pre">area._listener</span></tt>, è in effetti un metodo (quindi un &#8220;callable&#8221;) dell&#8217;area di confronto interna alla <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt>.</p>
+<p>Non ci resta quindi che garantire che <tt class="docutils literal"><span class="pre">area._listener</span></tt> sia sempre presente in tutte le aree di confronto, e sia sempre chiamabile con un solo argomento. Abbiamo già garantito questo, e in un modo molto semplice: il metodo <tt class="docutils literal"><span class="pre">_listener</span></tt> appartiene alla classe-madre astratta, da cui derivano tutte le specifiche aree di confronto. In questo modo, siamo sicuri che <tt class="docutils literal"><span class="pre">_listener</span></tt> sarà sempre presente e adatto per il lavoro richiesto (a meno che qualche sottoclasse non lo sovrascriva in modo sbagliato, ma qui non possiamo farci nulla, a parte indicarlo come &#8220;privato&#8221;...).</p>
+<p>Ed ecco che cosa succede di importante in <tt class="docutils literal"><span class="pre">_listener</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># in BaseConfrontArea:</span>
+<span class="k">def</span> <span class="nf">_listener</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">topic</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">TOPIC_COL1</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">change_color_1</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">topic</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">TOPIC_COL2</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">change_color_2</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><tt class="docutils literal"><span class="pre">_listener</span></tt> accetta un solo argomento, che in effetti coincide con il messaggio in arrivo. In <tt class="docutils literal"><span class="pre">xw.lib.pubsub</span></tt> i messaggi sono in effetti istanze di una semplice classe <tt class="docutils literal"><span class="pre">Message</span></tt>, ma tutto ciò che dobbiamo sapere è che possiamo recuperare il topic del messaggio con l&#8217;attributo <tt class="docutils literal"><span class="pre">Message.topic</span></tt>, e il contenuto del messaggio sta invece nell&#8217;attributo <tt class="docutils literal"><span class="pre">Message.data</span></tt>.</p>
+<p>Come si vede, parsiamo il topic del messaggio per capire quale colore deve cambiare. Poi, passiamo il contenuto del messaggio a uno dei due metodi <tt class="docutils literal"><span class="pre">change_color_X</span></tt>, che saranno implementati in modo differente nelle varie sotto-classi.</p>
+<p>Il lavoro di frugare nel topic del messaggio per scoprire quale dei due colori sta cambiando è necessario: infatti <tt class="docutils literal"><span class="pre">_listener</span></tt> è abbonato a <tt class="docutils literal"><span class="pre">TOPIC_ROOT</span></tt>, e quindi riceve sia i messaggi con <tt class="docutils literal"><span class="pre">TOPIC_COL1</span></tt> sia quelli con <tt class="docutils literal"><span class="pre">TOPIC_COL2</span></tt>. Avremmo potuto fare diversamente: creare due metodi differenti, ciascuno dedicato all&#8217;ascolto di un solo tipo di messaggio:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># in ConfrontWindow:</span>
+<span class="k">def</span> <span class="nf">on_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener_col1</span><span class="p">,</span> <span class="n">TOPIC_COL1</span><span class="p">)</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener_col2</span><span class="p">,</span> <span class="n">TOPIC_COL2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener_col1</span><span class="p">)</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener_col2</span><span class="p">)</span>
+
+
+<span class="c"># in BaseConfrontArea:</span>
+<span class="k">def</span> <span class="nf">_listener_col1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">change_color_1</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_listener_col2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">change_color_2</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>E&#8217; possibile che questa seconda strada sia leggermente più veloce, e quindi preferibile se si prevede un grande numero di tavole di confronto aperte. Ma altrimenti è solo una questione di gusti.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">3. Il sistema di messaggi tra i componenti del programma.</a><ul>
+<li><a class="reference internal" href="#il-pattern-publish-subscriber">3.1. Il pattern publish/subscriber.</a></li>
+<li><a class="reference internal" href="#una-semplice-implementazione-di-pub-sub">3.2. Una semplice implementazione di pub/sub.</a></li>
+<li><a class="reference internal" href="#wx-lib-pubsub-un-implementazione-completa-di-pub-sub">3.3. wx.lib.pubsub: un&#8217;implementazione completa di pub/sub.</a></li>
+<li><a class="reference internal" href="#aggiungere-un-sistema-pub-sub-al-nostro-programma">3.4. Aggiungere un sistema pub/sub al nostro programma.</a></li>
+<li><a class="reference internal" href="#ascoltare-i-messaggi-inviati">3.5. Ascoltare i messaggi inviati.</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="parte_2.html"
+                        title="previous chapter">2. Le tavole di confronto.</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="conclusione.html"
+                        title="next chapter">Conclusione.</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/parte_3.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="conclusione.html" title="Conclusione."
+             >next</a></li>
+        <li class="right" >
+          <a href="parte_2.html" title="2. Le tavole di confronto."
+             >previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Riccardo Polignieri.
+      Last updated on Dec 01, 2011.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

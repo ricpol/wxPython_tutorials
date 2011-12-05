@@ -1,0 +1,522 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Appendice: il codice completo del programma. &mdash; tutorial wxPython-OOP</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="tutorial wxPython-OOP" href="index.html" />
+    <link rel="prev" title="Conclusione." href="conclusione.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="conclusione.html" title="Conclusione."
+             accesskey="P">previous</a></li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="appendice-il-codice-completo-del-programma">
+<h1>Appendice: il codice completo del programma.<a class="headerlink" href="#appendice-il-codice-completo-del-programma" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="modulo-color-main-i-componenti-della-finestra-principale">
+<h2>1. Modulo color_main: i componenti della finestra principale.<a class="headerlink" href="#modulo-color-main-i-componenti-della-finestra-principale" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<span class="c"># -*- coding: cp1252 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Confronto colori.</span>
+<span class="sd">Una utility per scegliere e confrontare i colori in diversi modi.</span>
+<span class="sd">Questo modulo contiene gli elementi della finestra principale dell&#39;interfaccia.</span>
+
+<span class="sd">Questa versione del programma e&#39; puramente dimostrativa: questo modulo</span>
+<span class="sd">(e il suo compagno confront_area.py) sono il codice allegato al tutorial</span>
+<span class="sd">&quot;wxPython: tutorial su tecniche di programmazione OOP&quot;.</span>
+<span class="sd">Per questa ragione la documentazione interna e&#39; lacunosa (e in italiano).</span>
+<span class="sd">Si rimanda al tutorial per maggiori chiarimenti.</span>
+
+<span class="sd">(c) 2011 Riccardo Polignieri (ric.pol@libero.it)</span>
+<span class="sd">licenza: GPL</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">from</span> <span class="nn">wx.lib.pubsub</span> <span class="kn">import</span> <span class="n">Publisher</span>
+<span class="kn">from</span> <span class="nn">confront_area</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">LAB_COL_1</span> <span class="o">=</span> <span class="s">&#39;COLORE  1&#39;</span>
+<span class="n">LAB_COL_2</span> <span class="o">=</span> <span class="s">&#39;COLORE  2&#39;</span>
+
+<span class="n">TOPIC_ROOT</span> <span class="o">=</span> <span class="s">&#39;color_change&#39;</span> <span class="c"># il topic piu&#39; generale di cui abbiamo bisogno</span>
+<span class="n">TOPIC_COL1</span> <span class="o">=</span> <span class="s">&#39;col1_changed&#39;</span> <span class="c"># il topic che segnala il cambiamento del colore 1</span>
+<span class="n">TOPIC_COL2</span> <span class="o">=</span> <span class="s">&#39;col2_changed&#39;</span> <span class="c"># il topic che segnala il cambiamento del colore 2</span>
+
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># il componente-base: SpinSlider</span>
+
+<span class="k">class</span> <span class="nc">SpinSliderEvent</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">PyCommandEvent</span><span class="p">):</span>
+    <span class="s">&quot;L&#39;evento che lo SpinSlider emette quando ne viene modificato il valore.&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evtType</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PyCommandEvent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evtType</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+
+<span class="n">myEVT_SPINSLIDER</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewEventType</span><span class="p">()</span>
+<span class="n">EVT_SPINSLIDER</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">PyEventBinder</span><span class="p">(</span><span class="n">myEVT_SPINSLIDER</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">SpinSlider</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">):</span>
+    <span class="s">&#39;Un componente formato da uno slider e uno spin collegati tra loro.&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">SpinCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">SL_VERTICAL</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">SL_INVERSE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SPINCTRL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_spin</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_slider</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_HORIZONTAL</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_HORIZONTAL</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Fit</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_spin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_custom_event</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_slider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_custom_event</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_post_custom_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Crea ed emette l&#39;evento personalizzato EVT_SPINSLIDER.&quot;</span>
+        <span class="n">evt</span> <span class="o">=</span> <span class="n">SpinSliderEvent</span><span class="p">(</span><span class="n">myEVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GetEventHandler</span><span class="p">()</span><span class="o">.</span><span class="n">ProcessEvent</span><span class="p">(</span><span class="n">evt</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">GetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">SetLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">SetMin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">SetRange</span><span class="p">(</span><span class="n">min_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetMax</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">SetMin</span><span class="p">(</span><span class="n">min_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">SetMax</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">SetRange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetMin</span><span class="p">(),</span> <span class="n">max_</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slider</span><span class="o">.</span><span class="n">SetMax</span><span class="p">(</span><span class="n">max_</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">GetMin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetMin</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">GetMax</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin</span><span class="o">.</span><span class="n">GetMax</span><span class="p">()</span>
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># SliderPanel (componente formato da tre SpinSlider messi insieme)</span>
+
+<span class="k">class</span> <span class="nc">SliderPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">):</span>
+    <span class="s">&#39;Un componente formato da tre SpinSlider, per mappare un colore RGB.&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">40</span><span class="p">))</span>
+        <span class="n">comp_1</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">comp_2</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">comp_3</span> <span class="o">=</span> <span class="n">SpinSlider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="p">(</span><span class="n">comp_1</span><span class="p">,</span> <span class="n">comp_2</span><span class="p">,</span> <span class="n">comp_3</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_HORIZONTAL</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">FIXED_MINSIZE</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ctl</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+            <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">ctl</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Fit</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_spinslider</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_spinslider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="s">&quot;Intercetta l&#39;EVT_SPINSLIDER, lasciando poi che si propaghi.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+        <span class="c"># evt.Skip() # vedi tutorial per chiarimenti...</span>
+
+    <span class="k">def</span> <span class="nf">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ctl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">):</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_area</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">GetValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">SetLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ctl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">):</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">SetTitleLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">SetMax</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">ctl</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">,</span> <span class="n">max_</span><span class="p">):</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetMax</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">SetMin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">ctl</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">,</span> <span class="n">min_</span><span class="p">):</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetMin</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">GetMax</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">GetMax</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">GetMin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">GetMin</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">]</span>
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># MainColorConfront (la finestra principale!)</span>
+
+<span class="k">class</span> <span class="nc">MainColorConfront</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">SetFont</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Font</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">SWISS</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span> <span class="o">=</span> <span class="n">SliderPanel</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span> <span class="o">=</span> <span class="n">SliderPanel</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="o">.</span><span class="n">SetTitleLabel</span><span class="p">(</span><span class="n">LAB_COL_1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="o">.</span><span class="n">SetTitleLabel</span><span class="p">(</span><span class="n">LAB_COL_2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ctl</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="p">):</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetMin</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetMax</span><span class="p">((</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">))</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="n">ctl</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s">&#39;RGB&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">table_chooser</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="n">getAvailableTables</span><span class="p">(),</span>
+                                         <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_DROPDOWN</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="n">open_table</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Apri tavola&#39;</span><span class="p">)</span>
+
+        <span class="n">open_table</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_open_table</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_color_1_changed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SPINSLIDER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_color_2_changed</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">()</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">()</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table_chooser</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">open_table</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_color_1_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="s">&quot;Pubblica un messaggio per segnalare che il colore 1 e&#39; cambiato.&quot;</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">((</span><span class="n">TOPIC_ROOT</span><span class="p">,</span> <span class="n">TOPIC_COL1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="n">evt</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">on_color_2_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="s">&quot;Pubblica un messaggio per segnalare che il colore 2 e&#39; cambiato.&quot;</span>
+        <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">sendMessage</span><span class="p">((</span><span class="n">TOPIC_ROOT</span><span class="p">,</span> <span class="n">TOPIC_COL2</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="n">evt</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">on_open_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="s">&#39;Apre una tavola di confronto, tra quelle disponibili.&#39;</span>
+        <span class="n">fr</span> <span class="o">=</span> <span class="n">ConfrontWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">area_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">table_chooser</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="n">fr</span><span class="o">.</span><span class="n">Show</span><span class="p">()</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">MainColorConfront</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Confronto colori&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">Show</span><span class="p">()</span>
+<span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="modulo-confront-area-le-finestre-secondarie-dell-interfaccia">
+<h2>2. Modulo confront_area: le finestre secondarie dell&#8217;interfaccia.<a class="headerlink" href="#modulo-confront-area-le-finestre-secondarie-dell-interfaccia" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<span class="c"># -*- coding: cp1252 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Confronto colori.</span>
+<span class="sd">Una utility per scegliere e confrontare i colori in diversi modi.</span>
+<span class="sd">Questo modulo contiene le finestre secondarie dell&#39;interfaccia.</span>
+
+<span class="sd">Questa versione del programma e&#39; puramente dimostrativa: questo modulo</span>
+<span class="sd">(e il suo compagno color_main.py) sono il codice allegato al tutorial</span>
+<span class="sd">&quot;wxPython: tutorial su tecniche di programmazione OOP&quot;.</span>
+<span class="sd">Per questa ragione la documentazione interna e&#39; lacunosa (e in italiano).</span>
+<span class="sd">Si rimanda al tutorial per maggiori chiarimenti.</span>
+
+<span class="sd">(c) 2011 Riccardo Polignieri (ric.pol@libero.it)</span>
+<span class="sd">licenza: GPL</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">from</span> <span class="nn">wx.lib.pubsub</span> <span class="kn">import</span> <span class="n">Publisher</span>
+
+<span class="n">LAB_COL_1</span> <span class="o">=</span> <span class="s">&#39;COLORE  1&#39;</span>
+<span class="n">LAB_COL_2</span> <span class="o">=</span> <span class="s">&#39;COLORE  2&#39;</span>
+
+<span class="n">TOPIC_ROOT</span> <span class="o">=</span> <span class="s">&#39;color_change&#39;</span> <span class="c"># il topic piu&#39; generale di cui abbiamo bisogno</span>
+<span class="n">TOPIC_COL1</span> <span class="o">=</span> <span class="s">&#39;col1_changed&#39;</span> <span class="c"># il topic che segnala il cambiamento del colore 1</span>
+<span class="n">TOPIC_COL2</span> <span class="o">=</span> <span class="s">&#39;col2_changed&#39;</span> <span class="c"># il topic che segnala il cambiamento del colore 2</span>
+
+<span class="c"># vedi AVAILABLE_AREAS in fondo al modulo</span>
+<span class="c"># per la lista dei tipi di area di confronto disponibili</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;getAvailableTables&#39;</span><span class="p">,</span> <span class="s">&#39;ConfrontWindow&#39;</span><span class="p">]</span>
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># due funzioni di convenienza</span>
+
+<span class="k">def</span> <span class="nf">getAvailableTables</span><span class="p">():</span>
+    <span class="s">&quot;Restituisce l&#39;elenco delle tavole di confronto disponibili.&quot;</span>
+    <span class="k">return</span> <span class="n">AVAILABLE_AREAS</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">getConfrontArea</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">area_type</span><span class="p">):</span>
+    <span class="s">&quot;Restituisce l&#39;istanza di un&#39;area di confronto.&quot;</span>
+    <span class="n">area</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="n">AVAILABLE_AREAS</span><span class="p">[</span><span class="n">area_type</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">area</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># ConfrontWindow (il MiniFrame che &quot;contiene&quot; le aree di confronto vere e propie)</span>
+
+<span class="k">class</span> <span class="nc">ConfrontWindow</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">MiniFrame</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;style&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">CAPTION</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">SYSTEM_MENU</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">CLOSE_BOX</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">RESIZE_BORDER</span>
+        <span class="n">area_type</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;area_type&#39;</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">MiniFrame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">p</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">getConfrontArea</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">area_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ToggleButton</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;connetti&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOGGLEBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_connect</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSize</span><span class="p">((</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">on_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="s">&quot;Mette in ascolto l&#39;area di confronto per eventuali cambi di colore.&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s">&#39;disconnetti&#39;</span><span class="p">)</span>
+            <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener</span><span class="p">,</span> <span class="n">TOPIC_ROOT</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connect_button</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s">&#39;connetti&#39;</span><span class="p">)</span>
+            <span class="n">Publisher</span><span class="p">()</span><span class="o">.</span><span class="n">unsubscribe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">.</span><span class="n">_listener</span><span class="p">)</span>
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># lo scheletro (una classe astratta) per le varie tavole di confronto</span>
+
+<span class="k">class</span> <span class="nc">BaseConfrontArea</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="s">&quot;Costruisce la parte non-specifica dell&#39;area di confronto.&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_READONLY</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">specific_layout</span><span class="p">(),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridSizer</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">LAB_COL_1</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_HORIZONTAL</span><span class="p">)</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">LAB_COL_2</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_HORIZONTAL</span><span class="p">)</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+        <span class="n">s1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Fit</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_listener</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="s">&#39;Ascolta e parsa i messaggi in arrivo, e agisce di conseguenza.&#39;</span>
+        <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">topic</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">TOPIC_COL1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">change_color_1</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">topic</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">TOPIC_COL2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">change_color_2</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">specific_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s">&quot;Costruisce il resto dell&#39;area di confronto: restituisce un sizer.&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">,</span> <span class="s">&#39;da implementare nelle sotto-classi!&#39;</span>
+
+    <span class="k">def</span> <span class="nf">change_color_1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="s">&#39;Cambia effettivamente il colore 1.&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">,</span> <span class="s">&#39;da implementare nelle sotto-classi!&#39;</span>
+
+    <span class="k">def</span> <span class="nf">change_color_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="s">&#39;Cambia effettivamente il colore 2.&#39;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">,</span> <span class="s">&#39;da implementare nelle sotto-classi!&#39;</span>
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># le varie tavole di confronto</span>
+
+<span class="k">class</span> <span class="nc">FieldsConfrontArea</span><span class="p">(</span><span class="n">BaseConfrontArea</span><span class="p">):</span>
+    <span class="s">&quot;Una tavola di confronto fatta da due aree (verticali o orizzontali).&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;direction&#39;</span><span class="p">)</span>
+        <span class="n">BaseConfrontArea</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">specific_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="nf">change_color_1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col1</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">change_color_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col2</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">TextOnBgConfrontArea</span><span class="p">(</span><span class="n">BaseConfrontArea</span><span class="p">):</span>
+    <span class="s">&quot;Una tavola di confronto fatta da un testo su uno sfondo.&quot;</span>
+    <span class="k">def</span> <span class="nf">specific_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_MULTILINE</span><span class="p">)</span>
+        <span class="n">font_chooser</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Font...&#39;</span><span class="p">)</span>
+
+        <span class="n">font_chooser</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_font</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">txt</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">font_chooser</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="nf">on_font</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">FontData</span><span class="p">()</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">EnableEffects</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">SetInitialFont</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">txt</span><span class="o">.</span><span class="n">GetFont</span><span class="p">())</span>
+
+        <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">FontDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+            <span class="n">font</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">GetFontData</span><span class="p">()</span><span class="o">.</span><span class="n">GetChosenFont</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">txt</span><span class="o">.</span><span class="n">SetFont</span><span class="p">(</span><span class="n">font</span><span class="p">)</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">change_color_1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">txt</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">change_color_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">txt</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+<span class="c"># -----------------------------------------------------------------------------</span>
+<span class="c"># lista delle tavole di confronto disponibili</span>
+
+<span class="n">AVAILABLE_AREAS</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">((</span>
+    <span class="p">(</span><span class="s">&#39;Due aree (orizzontale)&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">FieldsConfrontArea</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;direction&#39;</span><span class="p">:</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">})),</span>
+    <span class="p">(</span><span class="s">&#39;Due aree (verticale)&#39;</span><span class="p">,</span>   <span class="p">(</span><span class="n">FieldsConfrontArea</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;direction&#39;</span><span class="p">:</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">})),</span>
+    <span class="p">(</span><span class="s">&#39;Testo su sfondo&#39;</span><span class="p">,</span>        <span class="p">(</span><span class="n">TextOnBgConfrontArea</span><span class="p">,</span> <span class="p">{}))</span> <span class="p">,</span>
+    <span class="p">))</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&#39;Questo modulo non deve essere eseguito. </span><span class="se">\n\n</span><span class="s">&#39;</span>
+    <span class="k">print</span> <span class="n">__doc__</span>
+    <span class="nb">raw_input</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n\n</span><span class="s">enter per terminare&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Appendice: il codice completo del programma.</a><ul>
+<li><a class="reference internal" href="#modulo-color-main-i-componenti-della-finestra-principale">1. Modulo color_main: i componenti della finestra principale.</a></li>
+<li><a class="reference internal" href="#modulo-confront-area-le-finestre-secondarie-dell-interfaccia">2. Modulo confront_area: le finestre secondarie dell&#8217;interfaccia.</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="conclusione.html"
+                        title="previous chapter">Conclusione.</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/appendice.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="conclusione.html" title="Conclusione."
+             >previous</a></li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Riccardo Polignieri.
+      Last updated on Dec 01, 2011.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

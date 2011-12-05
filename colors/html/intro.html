@@ -1,0 +1,114 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Introduzione &mdash; tutorial wxPython-OOP</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="tutorial wxPython-OOP" href="index.html" />
+    <link rel="next" title="1. Costruire la finestra principale dell’applicazione." href="parte_1.html" />
+    <link rel="prev" title="wxPython: tutorial su tecniche di programmazione OOP" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="parte_1.html" title="1. Costruire la finestra principale dell’applicazione."
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="index.html" title="wxPython: tutorial su tecniche di programmazione OOP"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="introduzione">
+<h1>Introduzione<a class="headerlink" href="#introduzione" title="Permalink to this headline">¶</a></h1>
+<p>Questo tutorial vi farà conoscere alcuni aspetti &#8220;avanzati ma non troppo&#8221; della programmazione con wxPython. Vedremo, nell&#8217;ordine:</p>
+<ul class="simple">
+<li>come costruire widget complessi a partire da componenti più semplici;</li>
+<li>come creare e usare un semplice evento personalizzato;</li>
+<li>come usare alcune tecniche OOP per organizzare meglio il codice, fino a scrivere dei componenti &#8220;plugin&#8221; per la nostra interfaccia;</li>
+<li>come organizzare un servizio di messaggi (applicando il pattern OOP noto come &#8220;publish/subscriber&#8221;) per far comunicare i componenti della nostra interfaccia.</li>
+</ul>
+<p>L&#8217;ultimo punto è quello forse più interessante, e ci spenderemo qualche paragrafo in più.</p>
+<p>Ma procediamo con ordine. Scaricate il programma (sono solo due moduli) e provatelo. Come vedete, è una utility per accostare e confrontare i colori in vari modi. L&#8217;ho scritto inizialmente per aiutarmi con alcuni lavori di grafica per siti web. Questa è una versione semplificata: l&#8217;originale aveva alcune altre feature utili, ma meno interessanti dal punto di vista &#8220;didattico&#8221;.</p>
+<p>Come vedete, il programma ha una finestra principale, che presenta i controlli per selezionare due colori (che si possono vedere in anteprima nei due rettangoli in alto). Ma il divertimento vero inizia quando aprite una &#8220;tavola di confronto&#8221; (scegliete dalla lista in basso). La tavola resta inerte finché non cliccate sul pulsante &#8220;connetti&#8221;, dopo di che aggiorna i suoi colori, tenendo dietro ai cambiamenti fatti nella finestra principale. Potete aprire quante tavole volete, e anche più copie della stessa tavola.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">wxPython: tutorial su tecniche di programmazione OOP</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="parte_1.html"
+                        title="next chapter">1. Costruire la finestra principale dell&#8217;applicazione.</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/intro.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="parte_1.html" title="1. Costruire la finestra principale dell’applicazione."
+             >next</a></li>
+        <li class="right" >
+          <a href="index.html" title="wxPython: tutorial su tecniche di programmazione OOP"
+             >previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Riccardo Polignieri.
+      Last updated on Dec 01, 2011.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

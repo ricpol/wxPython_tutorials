@@ -1,0 +1,249 @@
+
+1. Costruire la finestra principale dell'applicazione.
+======================================================
+
+Quando avete capito che *cosa* fa il programma, è tempo di scoprire *come* lo fa. Il primo file che esaminiamo, ``color_main.py``, contiene tutto il codice della finestra principale. Il codice è in inglese, ma le docstring e i commenti sono lasciati in italiano per comodità. 
+
+La parte principale di questa finestra è costituita da due set di sei Slider e sei SpinCtrl, accoppiati tra loro. Avremmo potuto naturalmente inserirli uno dopo l'altro, "a pari grado" nel layout della finestra, ma non sarebbe stato molto saggio. In tutti i casi dove troviamo un pattern ripetitivo, conviene piuttosto identificare e isolare il codice che si ripete, e metterlo in un luogo specifico (un modulo, una classe, una funzione) così da poterlo riutilizzare più volte. Detto in altri termini, **fattorizzare il codice**. 
+
+
+1.1. SpinSlider: il componente-base.
+------------------------------------
+
+Il primo codice che scriviamo, quindi, è una classe che "impacchetta" un ``wx.Slider`` e un ``wx.SpinCtrl``, e li mantiene sincronizzati tra loro. Cerchiamo di scriverla in modo totalmente indipendente dall'uso che ne dovremmo fare dopo. La classe ``SpinSlider`` illustra questo concetto::
+
+  class SpinSlider(wx.Panel):
+      def __init__(self, *args, **kwargs):
+          wx.Panel.__init__(self, *args, **kwargs)
+        
+          self.spin = wx.SpinCtrl(self)
+          self.slider = wx.Slider(self, style=wx.SL_VERTICAL|wx.SL_INVERSE)
+          self.label = wx.StaticText(self)
+        
+          self.spin.Bind(wx.EVT_SPINCTRL, self._on_spin)
+          self.slider.Bind(wx.EVT_SLIDER, self._on_slider)
+        
+          # etc. etc. 
+    
+      def _on_spin(self, evt):
+          self.slider.SetValue(self.spin.GetValue())
+          self._post_custom_event()
+    
+      def _on_slider(self, evt):
+          self.spin.SetValue(self.slider.GetValue())
+          self._post_custom_event()
+
+      # etc. etc. 
+     
+      def SetValue(self, value):
+          self.spin.SetValue(value)
+          self.slider.SetValue(value)
+        
+      def GetValue(self):
+          return self.spin.GetValue()
+        
+      # etc. etc.
+        
+La classe è corta e semplice da capire (un altro dei vantaggi della fattorizzazione). Il nostro SpinSlider ha al suo interno solo tre cose: una ``wx.Label``, un ``wx.Slider`` e un ``wx.SpinCtrl``. La classe deriva da un ``wx.Panel``, in modo da poterne utilizzare le funzionalitè (prima tra tutte, la possibilità di ospitare un sizer per il layout dei tre elementi). Nel metodo ``__init__`` ci limitiamo a definire i componenti e realizzare il layout come di consueto. 
+
+Notate che vogliamo intercettare gli eventi che provengono da *entrambi* i componenti (e quindi ``wx.EVT_SLIDER`` e ``wx.EVT_SPINCTRL``). In ciascuno dei due gestori (rispettivamente ``_on_slider`` e ``_on_spin``) manteniamo sincronizzati i valori, e questo è sufficiente a garantire la funzionalità di base del nostro SpinSlider. 
+Aggiungiamo poi alcuni metodi "di servizio" come ``GetValue``, ``SetValue`` etc., che serviranno al codice che deve usare "dall'esterno" il nostro widget. 
+
+
+1.2. SpinSliderEvent: un evento personalizzato per lo SpinSlider.
+-----------------------------------------------------------------
+
+Fin qui, niente di particolarmente complesso, come si vede. In questi casi, la decisione più difficile è sempre quella iniziale: una volta deciso come organizzare la struttura del nostro programma, il codice si scrive (quasi) da solo. 
+
+Adesso però dobbiamo fronteggiare il primo problema tecnico. Quando l'utente modifica il valore del nostro SpinSlider, quale evento deve essere innescato per segnalare questo fatto al resto del sistema? Come abbiamo visto, l'utente potrebbe intervenire sullo Slider (e innescare un ``EVT_SLIDER``) o sullo SpinCtrl (e dare avvio a un ``EVT_SPINCTRL``). Entrambi derivano da ``wx.CommandEvent``, e pertanto possono propagarsi naturalmente lungo la gerarchia dei contenitori (ricordiamo che i ``wx.CommandEvent`` si propagano, mentre i ``wx.Event`` no). 
+
+Potremmo sfruttare quindi la propagazione: se per esempio scriviamo::
+
+  def _on_spin(self, evt):
+      self.slider.SetValue(self.spin.GetValue()) # sincronizzo...
+      evt.Skip()  # ... e lascio che l'evento si propaghi
+      
+Questo basterebbe a far propagare l'evento. Quindi qualsiasi componente "esterno" potrebbe limitarsi a intercettare un ``EVT_SPIN`` e reagire di conseguenza. Ma c'è un problema. Non possiamo lasciare che si propaghi solo uno dei due eventi e ignorare l'altro, perché quando l'utente agisce sul widget che non propaga, dall'esterno sembra che non sia successo nulla. Dobbiamo quindi far propagare *entrambi* gli eventi: ma questo vuol dire che il codice che usa il nostro SpinSlider dovrà ricordarsi sempre di intercettarli *entrambi*::
+
+  # nel codice client:
+  mySpinSlider = SpinSlider(self)
+  mySpinSlider.Bind(wx.EVT_SLIDER, self.on_spinslider)   # l'uno...
+  mySpinSlider.Bind(wx.EVT_SPINCTRL, self.on_spinslider) # ... e l'altro!
+  # un po' scomodo!
+  
+Questo è perfettamente possibile, naturalmente: ma ci sembra poco elegante. E allora? Scegliamo di creare un nuovo evento personalizzato, e di emetterlo manualmente al momento giusto. 
+
+Per prima cosa, scriviamo il nuovo evento, la classe ``SpinSliderEvent``. Ci basterebbe derivarlo da ``wx.CommandEvent`` per dargli la facoltà di propagarsi. Purtroppo non è possibile derivare direttamente da ``wx.CommandEvent`` (che è una classe sensibile solo al lato C++ delle wxWidgets), ma poco male: wxPython ci mette a disposizione una classe-specchio ``wx.PyCommandEvent``, che possiamo usare al suo posto. 
+
+Nel nostro caso ci basta scrivere una classe "vuota"::
+
+  class SpinSliderEvent(wx.PyCommandEvent):
+      def __init__(self, evtType, id):
+          wx.PyCommandEvent.__init__(self, evtType, id)
+
+Ma se volessimo potremmo aggiungere delle variabili da trasmettere insieme all'evento::
+
+  class MyEvent(wx.PyCommandEvent):
+      def __init__(self, evtType, id):
+          wx.PyCommandEvent.__init__(self, evtType, id)
+          self.my_val = 'foo' # questo sara' poi accessibile come event.my_val
+
+Una volta scritto il nostro evento personalizzato, il modo standard di predisporlo all'uso consiste in queste due righe::
+
+  myEVT_SPINSLIDER = wx.NewEventType()
+  EVT_SPINSLIDER = wx.PyEventBinder(myEVT_SPINSLIDER, 1)
+
+Con la prima istanziamo un nuovo "tipo di evento". Questo è un dettaglio tecnico che non vale la pena di approfondire (semplicemente: fate così e tutto funzionerà!): tuttavia notate che il paramentro ``evtType``, richiesto nell'``__init__`` della nostra classe ``SpinSliderEvent``, sarà appunto questo "tipo di evento" che abbiamo appena creato.
+
+Con la seconda riga creiamo un ``EventBinder`` pronto all'uso per il nostro tipo di evento. Anche questo è molto tecnico, e a noi basta sapere che, se facciamo così, funzionerà. In ogni caso, un ``EventBinder`` è l'oggetto che dietro le quinte viene usato quando si chiama il familiare ``Bind()`` per collegare un evento a un gestore. Il secondo parametro che passiamo all'``EventBinder`` indica una cosa strana: **quanti ID** si deve aspettare l'evento, al momento in cui dovrà essere creato. Questo risulterà più chiaro da capire tra un attimo, per il momento basta sapere che, nel 99% dei casi, la risposta è: basta uno, grazie!
+
+Conviene infine, per uniformità con gli altri ``EventBinder`` predefiniti e consueti, dare anche al nostro un nome conforme allo schema ``EVT_XXXX``. 
+
+Completata la creazione del nostro evento personalizzato, vediamo come possiamo emetterlo dall'interno del nostro SpinSlider. Questo compito è assolto dal metodo ``_post_custom_event``. Vediamolo nel dettaglio::
+
+  def _post_custom_event(self):
+      evt = SpinSliderEvent(myEVT_SPINSLIDER, self.GetId())
+      self.GetEventHandler().ProcessEvent(evt)
+        
+Anche questo è un procedimento standard: non è necessario capire tutti i dettagli del suo funzionamento. Con la prima riga creiamo un'istanza del nostro evento. Passiamo come primo parametro il "tipo di evento" definito prima, e poi (vi ricordate?) **un solo ID** (il nostro stesso). Ci sono casi in cui è utile passare più di un ID (per esempio per raggruppare gli eventi dei menu), ma di solito basta passarne uno solo, ossia naturalmente l'ID dell'oggetto stesso che scatena l'evento. 
+
+La seconda riga è quella che effettivamente lancia l'evento verso l'esterno. Si invoca l'"event handler" appropriato (un altro oggetto misterioso che lavora dietro le quinte, e di cui non dobbiamo preoccuparci troppo), e gli si ordina senza tante cerimonie di innescare l'evento. 
+
+Possiamo completare l'opera con una chiamata a ``_post_custom_event`` nei punti in cui ce n'è bisogno: al termine dei due gestori ``_on_spin`` e ``_on_slider``. 
+
+A questo punto, con una procedura forse un po' oscura nei dettagli ma tutto sommato semplice da seguire, il nostro SpinSlider è in grado di innescare un ``EVT_SPINSLIDER`` ogni volta che l'utente agisce su uno dei due widget interni. Vedremo tra poco come raccoglierlo e farne l'uso migliore. 
+
+
+1.3. SliderPanel: un widget composto per rappresentare un colore.
+-----------------------------------------------------------------
+
+Adesso che abbiamo scritto il nostro componente-base (``SpinSlider``) e lo abbiamo dotato di un evento personalizzato (``EVT_SPINSLIDER``) per informare il mondo esterno dei suoi cambiamenti di stato, è tempo di passare al gradino successivo. 
+
+La classe ``SliderPanel`` rappresenta un widget per manipolare le componenti di un colore. Presenta pertanto tre ``SpinSlider`` affiancati (uno per ciascun canale), oltre ad alcuni elementi accessori: un'etichetta per il titolo del colore rappresentato, e un rettangolo colorato (un semplice ``wx.Panel``, in realtà) che mostra il colore scelto::
+
+  class SliderPanel(wx.Panel):
+      def __init__(self, *args, **kwargs):
+          wx.Panel.__init__(self, *args, **kwargs)
+        
+          self.title = wx.StaticText(self)
+          self.color_area = wx.Panel(self, size=(-1, 40))
+          comp_1 = SpinSlider(self)
+          comp_2 = SpinSlider(self)
+          comp_3 = SpinSlider(self)
+          self.components = (comp_1, comp_2, comp_3)
+          
+          # etc. etc.
+        
+          self.Bind(EVT_SPINSLIDER, self._on_spinslider)
+        
+      # etc. etc.
+      
+      def SetValue(self, value):
+          for i, ctl in enumerate(self.components):
+              ctl.SetValue(value[i])
+          self.color_area.SetBackgroundColour(value)
+          self.color_area.Refresh()
+            
+      def GetValue(self):
+          return [i.GetValue() for i in self.components]
+
+      # etc. etc.
+
+Il metodo ``__init__`` è del tutto prevedibile. Spiccano le righe::
+
+  comp_1 = SpinSlider(self)
+  comp_2 = SpinSlider(self)
+  comp_3 = SpinSlider(self)
+  
+in cui creiamo i nostri tre SpinSlider affiancati, e la riga::
+
+  self.Bind(EVT_SPINSLIDER, self._on_spinslider)
+
+dove intercettiamo l'``EVT_SPINSLIDER`` che (ormai lo sappiamo) viene emesso quando uno SpinSlider è modificato. 
+Si noti anche la variabile di convenienza ``self.components``, che ci sarà utile per iterare sui tre SpinSlider (cosa che dovremo fare molto spesso). 
+
+Anche i consueti metodi "di servizio" (``SetMin``, ``SetMax``, etc. etc.) sono del tutto ordinari: ricalcano l'interfaccia già collaudata di SpinSlider, e in un certo senso la moltiplicano per tre. Infatti adesso i metodi ``Set*`` accettano una tupla di tre valori, e i metodi ``Get*`` restituiscono una tupla di tre valori. 
+
+Avremmo potuto separare i getter e i setter per ciascun canale (e scrivere metodi come ``SetComp1Value``, ``SetComp2Value``, etc), ma abbiamo trovato due buone ragioni per non farlo. La prima è che ci metteremmo contro la consueta interfaccia di wx.Python ("GetValue", "SetValue", etc.). La seconda è che comunque non avrebbe senso, perché un colore in wx.Python è rappresentato da una classe ``wx.Colour`` che non ha getter e setter separati per ciascun canale: per esempio, non esiste ``wx.Colour.SetRed``. 
+Di conseguenza prevediamo che l'uso più normale che faremo del nostro SliderPanel sarà, per esempio, qualcosa come::
+
+  my_sliderpanel = SliderPanel(self)
+  # e, piu' avanti nel codice...
+  colour = wx.Colour(*my_sliderpanel.GetValue()) # spacchettamento di tupla!
+
+E dunque non avrebbe molto senso separare i getter e i setter per ciascun canale, per poi ritrovarsi a scrivere filastrocche come:: 
+
+  my_sliderpanel = SliderPanel(self)
+  colour = wx.Colour(my_sliderpanel.GetComp1Value(), 
+                     my_sliderpanel.GetComp2Value(), 
+                     my_sliderpanel.GetComp3Value())
+
+Una parola a parte merita ``SetTitleLabel``, metodo nuovo che abbiamo creato apposta per cambiare l'etichetta del titolo dello SliderPanel, dato che ``SetLabel`` deve restare riservato per le etichette dei tre singoli SpinSlider. 
+
+
+1.4. L'EVT_SPINSLIDER si propaga allo SliderPanel.
+--------------------------------------------------
+
+E che fine ha fatto l'``EVT_SPINSLIDER``? E' intercettato opportunamente, e gestito dal metodo ``_on_spinslider``: qui ci limitiamo ad aggiornare il colore del riquadro di anteprima::
+
+  def _on_spinslider(self, evt):
+      self.color_area.SetBackgroundColour(wx.Colour(*self.GetValue()))
+      self.color_area.Refresh()
+      # evt.Skip() # propagare o non propagare?
+      
+Noterete che per conoscere il colore attuale ci serviamo della chiamata ``self.GetValue()``, perché (come già spiegato) non ci interessa sapere quale dei tre componenti è stato appena modificato. Per questa ragione, raccogliamo l'``EVT_SPINSLIDER`` senza interessarci da quale dei tre SpinSlider proviene. 
+
+Ma c'è un'altra considerazione che vale la pena di approfondire. Alla fine di ``_on_spinslider``, secondo lo schema già visto, dovremmo chiamare ``evt.Skip()`` per permettere all'evento di propagarsi ulteriormente. 
+Tuttavia, nel componente di ordine superiore noi adotteremo una strategia diversa (e vedremo anche perché!), per cui non abbiamo bisogno che qui l'evento si propaghi ulteriormente. 
+
+``evt.Skip()`` resta però necessario, in generale, se si vuole che l'evento si propaghi (per questo motivo ho lasciato la riga, commentata, come promemoria). Basta aggiungere la chiamata a ``evt.Skip()``, e il nostro SliderPanel emetterà (o meglio, propagherà) un ``EVT_SPINSLIDER`` ogni volta che uno dei suoi cursori viene mosso. 
+Ora, fermiamoci un momento a riflettere: questo sarebbe un bene? Beh, forse *no*! 
+
+Prima di tutto sarebbe strano che un componente "di ordine superiore" continuasse a emettere un evento tipico di uno dei suoi componenti interni (se non altro per il nome ``EVT_SPINSLIDER``, che non richiama "SliderPanel"). Ma soprattutto, se noi dall'esterno chiamassimo ``event.GetId()``, non avremo l'ID dello SliderPanel, ma quello di uno dei suoi componenti (a cui non si avrebbe nemmeno il diritto di accedere direttamente, secondo una sana logica OOP). 
+
+Non bisogna sottovalutare questo problema. Se volessimo distribuire il nostro SliderPanel, qualcuno potrebbe voler usare l'ID dell'evento, e si troverebbe con un valore inaspettato. Se vogliamo che l'evento si propaghi, allora è nostra responsabilità "camuffarlo" opportunamente::
+
+  def _on_spinslider(self, evt):
+      # bla, bla, bla, e poi:
+      evt.SetId(self.GetId()) # un cambio d'abito necessario!
+      evt.Skip()
+
+Prima di lasciarlo propagare, cambiamo l'ID dell'evento, e lo impostiamo su quello dello SliderPanel. Così facendo risolviamo il problema della divulgazione dell'ID dei componenti interni. Vero è che, tuttavia, in questo modo perdiamo anche ogni riferimento a quale componente di colore è stata effettivamente cambiata: una volta che lo SliderPanel lascia propagare l'evento, al mondo esterno sembrerà che lo abbia emesso lui stesso, e sarà impossibile ricostruire da quale dei tre SpinSlider l'evento ha effettivamente avuto origine. 
+
+Come ho detto anche sopra, questo non mi sembra comunque un problema: nel mondo reale, quando manipoliamo i colori abbiamo sempre bisogno di tutte e tre le componenti, e non ci importa sapere quale esattamente è cambiata. 
+
+Se però invece volete a ogni costo mantenere traccia dello SpinSlider specifico che ha scatenato per primo l'evento, non vi resta che tagliare la testa al toro: scrivete un secondo evento personalizzato, chiamatelo per esempio ``EVT_SLIDERPANEL`` (così risolvete anche il problema estetico del nome inadeguato), e fatelo partire proprio alla fine di ``_on_spinslider``, invece di propagare il vecchio evento. In questo modo il vecchio evento morirà definitivamente, al suo posto ne verrà lanciato uno nuovo, con un nome migliore e l'ID giusto, e voi avrete anche la possibilità di trasmettere (in una variabile aggiuntiva) ogni informazione che desiderate circa quale componente è davvero cambiata. 
+Vi lascio tutto questo come esercizio, e noi invece andiamo avanti al prossimo passaggio di questo tutorial.
+
+
+1.5. MainColorConfront: uniamo tutto nella finestra principale.
+---------------------------------------------------------------
+
+Siamo arrivati alla stazione conclusiva, la classe ``MainColorConfront`` che rappresenta la finestra principale della nostra applicazione. Grazie a tutto il lavoro fatto finora, questa classe può essere molto corta e semplice: basta affiancare due ``SliderPanel``, inizializzarli (con i vari ``SetMin``, ``SetMax``, etc. che abbiamo opportunamente definito), e aggiungere una parte in basso (un ``wx.ComboBox`` e un pulsante) per la selezione e l'apertura delle varie tavole di confronto. 
+
+Per quanto riguarda quest'utima parte, ce ne occuperemo meglio nella prossima sezione di questo tutorial. Per il momento vi basti sapere che ``getAvailableTables()`` (chiamata inizializzando il ComboBox) restituisce una lista dei nomi delle tavole di confronto, e che ``ConfrontWindow`` (chiamata nel gestore dell'``EVT_BUTTON``) è appunto la tavola di confronto da aprire. 
+
+
+1.6. L'EVT_SPINSLIDER arriva finalmente a destinazione.
+-------------------------------------------------------
+
+Ed eccoci all'ultimo atto della complessa vicenda del nostro evento personalizzato. Vi ricordate? Avremmo potuto lasciar propagare l'evento dallo ``SliderPanel`` (chiamando ``event.Skip()`` nel gestore). Se avessimo fatto così, adesso ci basterebbe raccoglierlo in questo modo::
+
+  self.Bind(EVT_SPINSLIDER, self.on_color_changed)
+
+Tuttavia nella nostra finestra principale ci sono ben *due* ``SliderPanel``, e quindi avremmo avuto il problema di discriminare, nel gestore ``on_color_changed``, da quale dei due proviene l'evento. Intendiamoci, è un problema facile, se abbiamo avuto l'accortezza di re-impostare l'ID prima di lasciarlo propagare. 
+
+Tuttavia abbiamo preferito un'altra soluzione, un po' per motivi didattici, e un po' perché ci sembra più elegante. 
+Invece di collegare genericamente la finestra principale (``self``) all'evento, colleghiamo direttamente i due SliderPanel, in modo separato, e con due gestori separati::
+
+  self.color_1.Bind(EVT_SPINSLIDER, self.on_color_1_changed)
+  self.color_2.Bind(EVT_SPINSLIDER, self.on_color_2_changed)
+
+Questo elimina alla radice il problema di stabilire da dove arriva l'evento: ma attenzione all'effetto collaterale imprevisto! 
+
+Avendo collegato il nostro gestore (``on_color_X_changed``) direttamente allo SliderPanel, abbiamo anche cambiato l'ordine di propagazione. Adesso il nostro gestore verrà eseguito *subito*, al posto del gestore originario (``SliderPanel._on_spinslider``, ricordate?). E quindi, dobbiamo chiamare opportunamente ``Skip()`` alla fine di ``on_color_X_changed``, altrimenti la propagazione si arresta e il gestore originario non verrà mai eseguito (provare per credere)!
+
+Sta a voi decidere quale delle due tecniche preferite. L'importante è capire la differenza.
+
+Che cosa succede, infine, nei due gestori ``on_color_X_changed``? A parte la chiamata a ``Skip()``, le cui ragioni sono state appena spiegate, non facciamo nient'altro che mandare un messaggio di "colore cambiato" a tutti quelli che eventualmente sono interessati. Approfondiremo questa tecnica nella terza parte di questo tutorial, quindi per il momento pazientate ancora. Adesso è il momento di scoprire come funzionano le finestre secondarie, ossia le tavole di confronto.
+

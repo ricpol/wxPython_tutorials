@@ -1,0 +1,26 @@
+wxPython tutorial and stuff
+===========================
+
+(c): 2011 Riccardo Polignieri (ric.pol@libero.it)
+license: GPL
+
+
+1. Italian readme.
+------------------
+
+Questa e' una collezione di tutorial, esercizi, esempi, etc. su wxPython. 
+Questa raccolta organizza alcuni esempi che sono apparsi nel forum di 
+python-it.org (http://www.python-it.org/forum/index.php). 
+Per questo motivo, anche se il codice in se' e' in inglese, le docstring e i 
+testi di commento sono in italiano. 
+
+
+2. English readme.
+------------------
+
+This is a collection of tutorial, exercises, examples, etc., on wxPython-related 
+topics. 
+This reposition recaps some snippets already posted on an italian python forum 
+(http://www.python-it.org/forum/index.php). 
+For this reason, while the code itself is in english, docrstring and comment 
+text are in italian. 

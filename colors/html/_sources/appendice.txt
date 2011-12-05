@@ -1,0 +1,430 @@
+
+
+Appendice: il codice completo del programma.
+============================================
+
+1. Modulo color_main: i componenti della finestra principale.
+-------------------------------------------------------------
+
+::
+
+    #!/usr/bin/env python
+    # -*- coding: cp1252 -*-
+    """
+    Confronto colori. 
+    Una utility per scegliere e confrontare i colori in diversi modi. 
+    Questo modulo contiene gli elementi della finestra principale dell'interfaccia.
+
+    Questa versione del programma e' puramente dimostrativa: questo modulo 
+    (e il suo compagno confront_area.py) sono il codice allegato al tutorial 
+    "wxPython: tutorial su tecniche di programmazione OOP". 
+    Per questa ragione la documentazione interna e' lacunosa (e in italiano). 
+    Si rimanda al tutorial per maggiori chiarimenti.
+
+    (c) 2011 Riccardo Polignieri (ric.pol@libero.it)
+    licenza: GPL
+    """
+
+    import wx
+    from wx.lib.pubsub import Publisher
+    from confront_area import *
+
+    LAB_COL_1 = 'COLORE  1'
+    LAB_COL_2 = 'COLORE  2'
+
+    TOPIC_ROOT = 'color_change' # il topic piu' generale di cui abbiamo bisogno
+    TOPIC_COL1 = 'col1_changed' # il topic che segnala il cambiamento del colore 1
+    TOPIC_COL2 = 'col2_changed' # il topic che segnala il cambiamento del colore 2
+
+
+    # -----------------------------------------------------------------------------
+    # il componente-base: SpinSlider
+
+    class SpinSliderEvent(wx.PyCommandEvent):
+        "L'evento che lo SpinSlider emette quando ne viene modificato il valore."
+        def __init__(self, evtType, id):
+            wx.PyCommandEvent.__init__(self, evtType, id)
+            
+    myEVT_SPINSLIDER = wx.NewEventType()
+    EVT_SPINSLIDER = wx.PyEventBinder(myEVT_SPINSLIDER, 1)
+
+    class SpinSlider(wx.Panel):
+        'Un componente formato da uno slider e uno spin collegati tra loro.'
+        def __init__(self, *args, **kwargs):
+            wx.Panel.__init__(self, *args, **kwargs)
+            
+            self.spin = wx.SpinCtrl(self)
+            self.slider = wx.Slider(self, style=wx.SL_VERTICAL|wx.SL_INVERSE)
+            self.label = wx.StaticText(self)
+            
+            self.spin.Bind(wx.EVT_SPINCTRL, self._on_spin)
+            self.slider.Bind(wx.EVT_SLIDER, self._on_slider)
+            
+            s = wx.BoxSizer(wx.VERTICAL)
+            s.Add(self.label, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5)
+            s.Add(self.spin, 0, wx.EXPAND|wx.ALL, 5)
+            s.Add(self.slider, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5)
+            self.SetSizer(s)
+            self.Fit()
+        
+        def _on_spin(self, evt):
+            self.slider.SetValue(self.spin.GetValue())
+            self._post_custom_event()
+        
+        def _on_slider(self, evt):
+            self.spin.SetValue(self.slider.GetValue())
+            self._post_custom_event()
+            
+        def _post_custom_event(self):
+            "Crea ed emette l'evento personalizzato EVT_SPINSLIDER." 
+            evt = SpinSliderEvent(myEVT_SPINSLIDER, self.GetId())
+            self.GetEventHandler().ProcessEvent(evt)
+        
+        def SetValue(self, value):
+            self.spin.SetValue(value)
+            self.slider.SetValue(value)
+            
+        def GetValue(self):
+            return self.spin.GetValue()
+            
+        def SetLabel(self, label):
+            self.label.SetLabel(label)
+            self.Refresh()
+        
+        def SetMin(self, min_):
+            self.spin.SetRange(min_, self.spin.GetMax())
+            self.slider.SetMin(min_)
+                
+        def SetMax(self, max_):
+            self.spin.SetRange(self.spin.GetMin(), max_)
+            self.slider.SetMax(max_)
+        
+        def GetMin(self):
+            return self.spin.GetMin()
+        
+        def GetMax(self):
+            return self.spin.GetMax()
+            
+    # -----------------------------------------------------------------------------
+    # SliderPanel (componente formato da tre SpinSlider messi insieme)
+
+    class SliderPanel(wx.Panel):
+        'Un componente formato da tre SpinSlider, per mappare un colore RGB.'
+        def __init__(self, *args, **kwargs):
+            wx.Panel.__init__(self, *args, **kwargs)
+            
+            self.title = wx.StaticText(self)
+            self.color_area = wx.Panel(self, size=(-1, 40))
+            comp_1 = SpinSlider(self)
+            comp_2 = SpinSlider(self)
+            comp_3 = SpinSlider(self)
+            self.components = (comp_1, comp_2, comp_3)
+        
+            s = wx.BoxSizer(wx.VERTICAL)
+            s.Add(self.title, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5)
+            s.Add(self.color_area, 0, wx.FIXED_MINSIZE|wx.EXPAND, 0)
+            s1 = wx.BoxSizer()
+            for ctl in self.components:
+                s1.Add(ctl, 1, wx.EXPAND, 0)
+            s.Add(s1, 1, wx.EXPAND, 0)
+            self.SetSizer(s)
+            self.Fit()
+            
+            self.Bind(EVT_SPINSLIDER, self._on_spinslider)
+            
+        def _on_spinslider(self, evt):
+            "Intercetta l'EVT_SPINSLIDER, lasciando poi che si propaghi."
+            self.color_area.SetBackgroundColour(wx.Colour(*self.GetValue()))
+            self.color_area.Refresh()
+            # evt.Skip() # vedi tutorial per chiarimenti...
+
+        def SetValue(self, value):
+            for i, ctl in enumerate(self.components):
+                ctl.SetValue(value[i])
+            self.color_area.SetBackgroundColour(value)
+            self.color_area.Refresh()
+                
+        def GetValue(self):
+            return [i.GetValue() for i in self.components]
+        
+        def SetLabel(self, label):
+            for i, ctl in enumerate(self.components):
+                ctl.SetLabel(label[i])
+            
+        def SetTitleLabel(self, label):
+            self.title.SetLabel(label)
+            self.Refresh()
+        
+        def SetMax(self, max_):
+            for ctl, value in zip(self.components, max_):
+                ctl.SetMax(value)
+        
+        def SetMin(self, min_):
+            for ctl, value in zip(self.components, min_):
+                ctl.SetMin(value)
+                
+        def GetMax(self):
+            return [i.GetMax() for i in self.components]
+            
+        def GetMin(self):
+            return [i.GetMin() for i in self.components]
+            
+    # -----------------------------------------------------------------------------
+    # MainColorConfront (la finestra principale!)
+
+    class MainColorConfront(wx.Frame):
+        def __init__(self, *args, **kwargs):
+            wx.Frame.__init__(self, *args, **kwargs)
+            p = wx.Panel(self)
+            p.SetFont(wx.Font(10, wx.SWISS, wx.NORMAL, wx.NORMAL))
+            
+            self.color_1 = SliderPanel(p)
+            self.color_2 = SliderPanel(p)
+            self.color_1.SetTitleLabel(LAB_COL_1)
+            self.color_2.SetTitleLabel(LAB_COL_2)
+            for ctl in (self.color_1, self.color_2):
+                ctl.SetMin((0, 0, 0))
+                ctl.SetMax((255, 255, 255))
+                ctl.SetValue((0, 0, 0))
+                ctl.SetLabel('RGB')
+            
+            self.table_chooser = wx.ComboBox(p, choices=getAvailableTables(), 
+                                             style=wx.CB_DROPDOWN|wx.CB_READONLY)
+            open_table = wx.Button(p, -1, 'Apri tavola')
+            
+            open_table.Bind(wx.EVT_BUTTON, self.on_open_table)
+            self.color_1.Bind(EVT_SPINSLIDER, self.on_color_1_changed)
+            self.color_2.Bind(EVT_SPINSLIDER, self.on_color_2_changed)
+
+            s = wx.BoxSizer(wx.VERTICAL)
+            s1 = wx.BoxSizer()
+            s1.Add(self.color_1, 1, wx.EXPAND|wx.ALL, 5)
+            s1.Add((20, 20))
+            s1.Add(self.color_2, 1, wx.EXPAND|wx.ALL, 5)
+            s.Add(s1, 1, wx.EXPAND, 0)
+            s1 = wx.BoxSizer()
+            s1.Add(self.table_chooser, 1, wx.EXPAND|wx.ALL, 5)
+            s1.Add(open_table, 0, wx.ALL, 5)
+            s.Add(s1, 0, wx.EXPAND, 0)
+            p.SetSizer(s)
+        
+        def on_color_1_changed(self, evt):
+            "Pubblica un messaggio per segnalare che il colore 1 e' cambiato."
+            Publisher().sendMessage((TOPIC_ROOT, TOPIC_COL1), self.color_1.GetValue())
+            evt.Skip()
+        
+        def on_color_2_changed(self, evt):
+            "Pubblica un messaggio per segnalare che il colore 2 e' cambiato."
+            Publisher().sendMessage((TOPIC_ROOT, TOPIC_COL2), self.color_2.GetValue())
+            evt.Skip()
+            
+        def on_open_table(self, evt):
+            'Apre una tavola di confronto, tra quelle disponibili.'
+            fr = ConfrontWindow(self, area_type=self.table_chooser.GetValue())
+            fr.Show()
+
+
+    app = wx.App(False)  
+    MainColorConfront(None, -1, 'Confronto colori').Show()
+    app.MainLoop() 
+
+
+2. Modulo confront_area: le finestre secondarie dell'interfaccia.
+-----------------------------------------------------------------
+
+::
+
+    #!/usr/bin/env python
+    # -*- coding: cp1252 -*-
+    """
+    Confronto colori. 
+    Una utility per scegliere e confrontare i colori in diversi modi. 
+    Questo modulo contiene le finestre secondarie dell'interfaccia.
+
+    Questa versione del programma e' puramente dimostrativa: questo modulo 
+    (e il suo compagno color_main.py) sono il codice allegato al tutorial 
+    "wxPython: tutorial su tecniche di programmazione OOP". 
+    Per questa ragione la documentazione interna e' lacunosa (e in italiano). 
+    Si rimanda al tutorial per maggiori chiarimenti.
+
+    (c) 2011 Riccardo Polignieri (ric.pol@libero.it)
+    licenza: GPL
+    """
+
+    from collections import OrderedDict
+    import wx
+    from wx.lib.pubsub import Publisher
+
+    LAB_COL_1 = 'COLORE  1'
+    LAB_COL_2 = 'COLORE  2'
+
+    TOPIC_ROOT = 'color_change' # il topic piu' generale di cui abbiamo bisogno
+    TOPIC_COL1 = 'col1_changed' # il topic che segnala il cambiamento del colore 1
+    TOPIC_COL2 = 'col2_changed' # il topic che segnala il cambiamento del colore 2
+
+    # vedi AVAILABLE_AREAS in fondo al modulo 
+    # per la lista dei tipi di area di confronto disponibili
+
+    __all__ = ['getAvailableTables', 'ConfrontWindow']
+
+    # -----------------------------------------------------------------------------
+    # due funzioni di convenienza
+
+    def getAvailableTables():
+        "Restituisce l'elenco delle tavole di confronto disponibili."
+        return AVAILABLE_AREAS.keys()
+        
+    def getConfrontArea(parent, area_type):
+        "Restituisce l'istanza di un'area di confronto."
+        area, kwargs = AVAILABLE_AREAS[area_type]
+        return area(parent, **kwargs)
+
+    # -----------------------------------------------------------------------------
+    # ConfrontWindow (il MiniFrame che "contiene" le aree di confronto vere e propie)
+
+    class ConfrontWindow(wx.MiniFrame):
+        def __init__(self, *args, **kwargs):
+            kwargs['style'] = wx.CAPTION|wx.SYSTEM_MENU|wx.CLOSE_BOX|wx.RESIZE_BORDER
+            area_type = kwargs.pop('area_type')
+            wx.MiniFrame.__init__(self, *args, **kwargs)
+            
+            p = wx.Panel(self)
+            self.area = getConfrontArea(p, area_type)
+            self.connect_button = wx.ToggleButton(p, -1, 'connetti')
+            
+            self.connect_button.Bind(wx.EVT_TOGGLEBUTTON, self.on_connect)
+            
+            s = wx.BoxSizer(wx.VERTICAL)
+            s.Add(self.area, 1, wx.EXPAND)
+            s.Add(self.connect_button, 0, wx.EXPAND|wx.ALL, 5)
+            p.SetSizer(s)
+            self.SetSize((200, 200))
+            
+        def on_connect(self, evt):
+            "Mette in ascolto l'area di confronto per eventuali cambi di colore."
+            if self.connect_button.GetValue():
+                self.connect_button.SetLabel('disconnetti')
+                Publisher().subscribe(self.area._listener, TOPIC_ROOT)
+            else:
+                self.connect_button.SetLabel('connetti')
+                Publisher().unsubscribe(self.area._listener)
+
+    # -----------------------------------------------------------------------------
+    # lo scheletro (una classe astratta) per le varie tavole di confronto
+
+    class BaseConfrontArea(wx.Panel):  
+        def __init__(self, *args, **kwargs):
+            "Costruisce la parte non-specifica dell'area di confronto."
+            wx.Panel.__init__(self, *args, **kwargs)
+            self.color_1 = wx.TextCtrl(self, style=wx.TE_READONLY)
+            self.color_2 = wx.TextCtrl(self, style=wx.TE_READONLY)
+            
+            s = wx.BoxSizer(wx.VERTICAL)
+            s.Add(self.specific_layout(), 1, wx.EXPAND, 0)
+            s1 = wx.GridSizer(2, 2, 2, 2)
+            s1.Add(wx.StaticText(self, -1, LAB_COL_1), 0, wx.ALIGN_CENTER_HORIZONTAL)
+            s1.Add(wx.StaticText(self, -1, LAB_COL_2), 0, wx.ALIGN_CENTER_HORIZONTAL)
+            s1.Add(self.color_1, 1, wx.EXPAND)
+            s1.Add(self.color_2, 1, wx.EXPAND)
+            s.Add(s1, 0, wx.EXPAND|wx.ALL, 5)
+            self.SetSizer(s)
+            self.Fit()
+
+        def _listener(self, msg):
+            'Ascolta e parsa i messaggi in arrivo, e agisce di conseguenza.'
+            if msg.topic[-1] == TOPIC_COL1:
+                self.color_1.SetValue(str(msg.data))
+                self.change_color_1(msg.data)
+            elif msg.topic[-1] == TOPIC_COL2:
+                self.color_2.SetValue(str(msg.data))
+                self.change_color_2(msg.data)
+        
+        def specific_layout(self):
+            "Costruisce il resto dell'area di confronto: restituisce un sizer."
+            raise NotImplementedError, 'da implementare nelle sotto-classi!'
+        
+        def change_color_1(self, col):
+            'Cambia effettivamente il colore 1.'
+            raise NotImplementedError, 'da implementare nelle sotto-classi!'
+        
+        def change_color_2(self, col):
+            'Cambia effettivamente il colore 2.'
+            raise NotImplementedError, 'da implementare nelle sotto-classi!'
+
+    # -----------------------------------------------------------------------------
+    # le varie tavole di confronto
+
+    class FieldsConfrontArea(BaseConfrontArea):
+        "Una tavola di confronto fatta da due aree (verticali o orizzontali)."
+        def __init__(self, *args, **kwargs):
+            self.direction = kwargs.pop('direction')
+            BaseConfrontArea.__init__(self, *args, **kwargs)
+            
+        def specific_layout(self):
+            self.col1 = wx.Panel(self)
+            self.col2 = wx.Panel(self)
+
+            s = wx.BoxSizer(self.direction)
+            s.Add(self.col1, 1, wx.EXPAND)
+            s.Add(self.col2, 1, wx.EXPAND)
+            return s
+            
+        def change_color_1(self, col):
+            self.col1.SetBackgroundColour(wx.Colour(*col))
+            self.Refresh()
+            
+        def change_color_2(self, col):
+            self.col2.SetBackgroundColour(wx.Colour(*col))
+            self.Refresh()
+
+
+    class TextOnBgConfrontArea(BaseConfrontArea):
+        "Una tavola di confronto fatta da un testo su uno sfondo."
+        def specific_layout(self):
+            self.txt = wx.TextCtrl(self, style=wx.TE_MULTILINE)
+            font_chooser = wx.Button(self, -1, 'Font...')
+            
+            font_chooser.Bind(wx.EVT_BUTTON, self.on_font)
+            
+            s = wx.BoxSizer(wx.VERTICAL)
+            s.Add(self.txt, 1, wx.EXPAND, 0)
+            s.Add(font_chooser, 0, wx.EXPAND|wx.ALL, 5)
+            return s
+        
+        def on_font(self, evt):
+            data = wx.FontData()
+            data.EnableEffects(False)
+            data.SetInitialFont(self.txt.GetFont())
+
+            dlg = wx.FontDialog(self, data)
+            if dlg.ShowModal() == wx.ID_OK:
+                font = dlg.GetFontData().GetChosenFont()
+                self.txt.SetFont(font)
+            dlg.Destroy()
+
+        def change_color_1(self, col):
+            self.txt.SetBackgroundColour(wx.Colour(*col))
+            self.Refresh()
+            
+        def change_color_2(self, col):
+            self.txt.SetForegroundColour(wx.Colour(*col))
+            self.Refresh()
+
+    # -----------------------------------------------------------------------------
+    # lista delle tavole di confronto disponibili
+
+    AVAILABLE_AREAS = OrderedDict((
+        ('Due aree (orizzontale)', (FieldsConfrontArea, {'direction':wx.VERTICAL})),
+        ('Due aree (verticale)',   (FieldsConfrontArea, {'direction':wx.HORIZONTAL})),
+        ('Testo su sfondo',        (TextOnBgConfrontArea, {})) ,
+        ))
+
+
+    if __name__ == '__main__':
+        print 'Questo modulo non deve essere eseguito. \n\n'
+        print __doc__
+        raw_input('\n\nenter per terminare')
+
+
+
+

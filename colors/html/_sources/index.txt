@@ -1,0 +1,22 @@
+.. wx_tutorial1 documentation master file, created by
+   sphinx-quickstart on Tue Nov 29 19:03:33 2011.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+wxPython: tutorial su tecniche di programmazione OOP
+====================================================
+
+Indice:
+
+.. toctree::
+   :maxdepth: 2
+
+   intro
+   parte_1
+   parte_2
+   parte_3
+   conclusione
+   appendice
+
+   
+   

@@ -1,0 +1,314 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. Le tavole di confronto. &mdash; tutorial wxPython-OOP</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="tutorial wxPython-OOP" href="index.html" />
+    <link rel="next" title="3. Il sistema di messaggi tra i componenti del programma." href="parte_3.html" />
+    <link rel="prev" title="1. Costruire la finestra principale dell’applicazione." href="parte_1.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="parte_3.html" title="3. Il sistema di messaggi tra i componenti del programma."
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="parte_1.html" title="1. Costruire la finestra principale dell’applicazione."
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="le-tavole-di-confronto">
+<h1>2. Le tavole di confronto.<a class="headerlink" href="#le-tavole-di-confronto" title="Permalink to this headline">¶</a></h1>
+<p>Questa seconda parte del tutorial esamina il modulo <tt class="docutils literal"><span class="pre">confront_area.py</span></tt>, dove creiamo le finestre secondarie dell&#8217;interfaccia.
+Anche in questo caso ci poniamo il problema di strutturare il nostro codice in modo da <strong>separare i diversi componenti</strong>, renderli &#8220;montabili&#8221; e &#8220;smontabili&#8221; tra loro come pezzi di Lego. Useremo però delle tecniche differenti da quelle che abbiamo visto finora (altrimenti il tutorial diventerebbe noioso!).</p>
+<p>Iniziamo a definire il problema. Vogliamo creare &#8220;tavole di confronto&#8221;, ossia piccole finestre secondarie (useremo dei <tt class="docutils literal"><span class="pre">wx.MiniFrame</span></tt> per l&#8217;aspetto complessivo) che si aprono dalla finestra principale del programma.</p>
+<p>Ogni tavola è diversa: nel nostro tutorial ce ne sono tre, ma potrebbero essere di più; anzi, sarebbe un&#8217;ottima cosa strutturare il nostro codice in modo da poter aggiungere facilmente nuovi modelli di tavola in futuro.</p>
+<p>La soluzione più ovvia è creare una classe separata per ciascun modello: ma già prima di buttar giù una singola riga di codice capiamo che non è la la cosa giusta. Infatti ci saranno per forza alcune parti comuni a tutti i modelli, che converrà <strong>fattorizzare</strong>. Per esempio, vogliamo che le tavole abbiano un pulsante &#8220;connetti/disconnetti&#8221;, con la relativa routine di connessione/disconnessione. Non possiamo ripetere questo codice tale e quale in tutte le classi.</p>
+<p>Ci sono grosso modo due strade per risolvere questo tipo di problemi: la prima è il <strong>sotto-classamento</strong>: scriviamo una classe-madre con gli elementi comuni, e poi tante classi-figlie, ciascuna con gli elementi specifici di un modello particolare di tavola. La seconda strada è la <strong>composizione</strong> di diversi pezzi.
+Noi useremo la tecnica del sotto-classamento un po&#8217; più avanti (abbiate pazienza). Per il momento, scegliamo invece la seconda strada.</p>
+<p>Abbiamo già usato tecniche di composizione nella prima parte del tutorial. Finora però si trattava di composizione &#8220;statica&#8221;, per così dire: i componenti di ordine superiore sapevano sempre benissimo quali componenti di ordine inferiore stavano utilizzando. Adesso invece proveremo un approccio più &#8220;dinamico&#8221;: il componente superiore non conosce a priori quale componente inferiore ospiterà al suo interno.</p>
+<p>Questa tecnica presenta qualche difficoltà aggiuntiva: è inevitabile che il componente superiore &#8220;si fidi&#8221; e chiami &#8220;alla cieca&#8221; qualche metodo del componente interno. Se però quest&#8217;ultimo non ha l&#8217;interfaccia attesa, potrebbe accadere qualcosa di molto spiacevole. Python è un linguaggio grandioso, e in casi di emergenza vi mette a disposizione molti strumenti per l&#8217;introspezione; ma la regola migliore è sempre quella del &#8220;duck typing&#8221;, ossia fidarsi che l&#8217;interfaccia sia quella giusta, e tenersi pronti a intercettare eventuali eccezioni.</p>
+<p>Tuttavia c&#8217;è una tecnica ancora migliore del &#8220;duck typing&#8221;: fin dove è possibile, cercate di non ficcarvi nei pasticci!</p>
+<p>In un framework piccolo e compatto come il nostro, cercheremo di definire un&#8217;interfaccia chiara e costringeremo i vari elementi a rispettarla. Vogliamo creare un meccanismo &#8220;dinamico&#8221;, ma non così tanto dinamico da darci il mal di testa.</p>
+<div class="section" id="confrontwindow-lo-scheletro-della-tavola-di-confronto">
+<h2>2.1. ConfrontWindow: lo scheletro della tavola di confronto.<a class="headerlink" href="#confrontwindow-lo-scheletro-della-tavola-di-confronto" title="Permalink to this headline">¶</a></h2>
+<p>Partiamo quindi dallo &#8220;scheletro&#8221; della nostra tavola di confronto: la classe <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt> racchiude gli elementi comuni: un bottone <tt class="docutils literal"><span class="pre">connect_button</span></tt> e un gestore relativo <tt class="docutils literal"><span class="pre">on_connect</span></tt> gestiscono la connessione/disconnessione della tavola (secondo un meccanismo che spiegheremo nella terza parte di questo tutorial):</p>
+<div class="highlight-python"><pre>class ConfrontWindow(wx.MiniFrame):
+    def __init__(self, *args, **kwargs):
+        kwargs['style'] = wx.CAPTION|wx.SYSTEM_MENU|wx.CLOSE_BOX|wx.RESIZE_BORDER
+        area_type = kwargs.pop('area_type')
+        wx.MiniFrame.__init__(self, *args, **kwargs)
+
+        p = wx.Panel(self)
+        self.area = getConfrontArea(p, area_type)
+        self.connect_button = wx.ToggleButton(p, -1, 'connetti')
+
+        self.connect_button.Bind(wx.EVT_TOGGLEBUTTON, self.on_connect)
+        # etc. etc.
+
+    def on_connect(self, evt):
+        # etc. etc.</pre>
+</div>
+<p>L&#8217;elemento più interessante però è:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">getConfrontArea</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">area_type</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><tt class="docutils literal"><span class="pre">self.area</span></tt> è la parte &#8220;incognita&#8221; ospitata all&#8217;interno della nostra tavola di confronto. Viene scelta dinamicamente a seconda dell&#8217;esito di una funzione-factory <tt class="docutils literal"><span class="pre">getConfrontArea</span></tt>, che esamineremo più tardi; per il momento, basta sapere che questa funzione restituisce un componente interno, che d&#8217;ora in poi chiameremo <strong>area di confronto</strong> (per distinguerla da &#8220;tavola di confronto&#8221;, che indica tutta la finestra).</p>
+<p><tt class="docutils literal"><span class="pre">self.area</span></tt> viene aggiunta al layout della finestra come niente fosse, fidandosi del fatto che... si possa davvero fare così (vedremo che le aree di confronto sono in effetti dei <tt class="docutils literal"><span class="pre">wx.Panel</span></tt>, quindi nessun problema). Si noti anche che nel metodo <tt class="docutils literal"><span class="pre">on_connect</span></tt> (che per il momento non dobbiamo capire) ci sono riferimenti a un&#8217;interfaccia <tt class="docutils literal"><span class="pre">self.area._listener</span></tt>, di cui naturalmente dovremo garantire l&#8217;esistenza.</p>
+<p>Riassuemendo:</p>
+<blockquote>
+<div><ul class="simple">
+<li><tt class="docutils literal"><span class="pre">getConfrontArea</span></tt> dovrà restituire una &#8220;cosa&#8221; del tipo di un <tt class="docutils literal"><span class="pre">wx.Panel</span></tt>, o un <tt class="docutils literal"><span class="pre">wx.Sizer</span></tt>, o qualche altra cosa che può stare dentro un sizer.</li>
+<li>dentro questa &#8220;cosa&#8221;, dovrà anche esserci un metodo <tt class="docutils literal"><span class="pre">_listener</span></tt></li>
+</ul>
+</div></blockquote>
+<p>Si tratta, come si vede, di assunzioni minime e facilmente verificabili. Stiamo mantenendo il dinamismo del nostro piccolo framework a un livello gestibile.</p>
+<p>Non c&#8217;è altro da aggiungere sulla classe <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt>.
+E&#8217; interessante notare, per concludere, il meccanismo di istanziazione: quando l&#8217;utente, dalla finestra principale, decide di aprire una &#8220;tavola di confronto&#8221;, dietro le quinte sta creando una nuova istanza <em>sempre della stessa classe</em> <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt>: è il parametro aggiuntivo <tt class="docutils literal"><span class="pre">area_type</span></tt> che determina dinamicamente, attraverso la funzione-factory <tt class="docutils literal"><span class="pre">getConfrontArea</span></tt>, quale <em>area</em> di confronto deve poi essere inclusa nella <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt>.
+Riguardiamo i punti essenziali del codice per capire meglio:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># in color_main.py, nel codice della finestra principale,</span>
+<span class="c"># l&#39;utente sceglie una &#39;area_type&#39;:</span>
+<span class="k">def</span> <span class="nf">on_open_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+    <span class="n">fr</span> <span class="o">=</span> <span class="n">ConfrontWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">area_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">table_chooser</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+    <span class="n">fr</span><span class="o">.</span><span class="n">Show</span><span class="p">()</span>
+
+<span class="c"># nell&#39;__init__ di ConfrontWindow ritroviamo &#39;area_type&#39;:</span>
+<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">area_type</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;area_type&#39;</span><span class="p">)</span>
+    <span class="n">wx</span><span class="o">.</span><span class="n">MiniFrame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="c"># ed ecco come &#39;area_type&#39; determina la creazione</span>
+    <span class="c"># di una area di confronto:</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">getConfrontArea</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">area_type</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="baseconfrontarea-una-classe-base-astratta-per-le-aree-di-confronto">
+<h2>2.2. BaseConfrontArea: una classe-base astratta per le aree di confronto.<a class="headerlink" href="#baseconfrontarea-una-classe-base-astratta-per-le-aree-di-confronto" title="Permalink to this headline">¶</a></h2>
+<p>Ricapitoliamo: abbiamo costruito lo scheletro della nostra tavola di confronto, e, già che c&#8217;eravamo, abbiamo anche creato un piccolo meccanismo di istanziazione dinamica (che si impernia sulla funzione <tt class="docutils literal"><span class="pre">getConfrontArea</span></tt>, che esamineremo più in là).</p>
+<p>Adesso però dobbiamo ancora affrontare il cuore del nostro problema: costruire le &#8220;aree di confronto&#8221;, ossia la parte più viva e specifica delle nostre tavole di confronto.
+Anche in questo caso, notiamo che ci sono degli aspetti comuni che possiamo fattorizzare: vogliamo che tutte le aree abbiano due caselle di testo (di sola lettura) dove scrivere le coordinate RGB del colore attualmente mostrato. In secondo luogo, tutte le aree devono avere una interfaccia <tt class="docutils literal"><span class="pre">_listener</span></tt> (ricordate, lo avevamo promesso!).</p>
+<p>Per separare gli elementi comuni dagli elementi specifici, questa volta ci serviamo della tecnica del <strong>sub-classamento</strong>. Scriviamo prima una classe-madre che contiene gli elementi comuni, e poi faremo delle classi-figlie per definire le specificità. La classe-madre è <em>astratta</em>, nel senso che non è concepita per essere istanziata direttamente: laggiù nel mondo reale, ci serviremo sempre di una delle sottoclassi.</p>
+<p>Esaminiamo <tt class="docutils literal"><span class="pre">BaseConfrontArea</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">BaseConfrontArea</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_READONLY</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">specific_layout</span><span class="p">(),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="c"># etc. etc.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Fit</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_listener</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>  <span class="c"># accorciato...</span>
+        <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">topic</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">TOPIC_COL1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">change_color_1</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">topic</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">TOPIC_COL2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">change_color_2</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">specific_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">change_color_1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">change_color_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</pre></div>
+</div>
+<p>Prima di tutto notiamo che deriva da un <tt class="docutils literal"><span class="pre">wx.Panel</span></tt>, e quindi si adatterà perfettamente all&#8217;interno della <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt> cui è destinato (prima promessa mantenuta).</p>
+<p>Poi c&#8217;è un metodo <tt class="docutils literal"><span class="pre">_listener</span></tt> e questo basta a garantirci che tutte le classi-figlie lo erediteranno (seconda promessa). Questo metodo è responsabile per l&#8217;ascolto e l&#8217;interpretazione dei messaggi in arrivo: ci occuperemo nella terza parte del tutorial di questo meccanismo, ma intanto notiamo che, a seconda del tipo di messaggio, <tt class="docutils literal"><span class="pre">_listener</span></tt> deve in effetti aggiornare uno dei due colori dell&#8217;area di confronto. Ma qui c&#8217;è un intoppo: non può farlo, perché non ha nessun indizio per sapere <em>che cosa</em> sarà davvero il &#8220;colore 1&#8221; o il &#8220;colore 2&#8221; che deve essere cambiato. Ricordatevi che qui siamo in una sovra-classe astratta, ma il &#8220;che cosa&#8221; sarà poi deciso nelle sotto-classi concrete.</p>
+<p>Ma niente panico, la soluzione è semplice: basta rimandare il problema! Di conseguenza, <tt class="docutils literal"><span class="pre">_listener</span></tt> invoca l&#8217;aiuto di due altri metodi, che chiamiamo opportunamente <tt class="docutils literal"><span class="pre">change_color_1</span></tt> e <tt class="docutils literal"><span class="pre">change_color_2</span></tt>. Questo, naturalmente, equivale a fare altre due promesse che dovremo poi mantenere.</p>
+<p>Perciò ci preoccupiamo di aggiungere i due nuovi metodi richiesti.
+Secondo una convenzione tipica, dichiariamo che si tratta (per il momento) di interfacce astratte, sollevando un <tt class="docutils literal"><span class="pre">NotImplementedError</span></tt>, e deleghiamo alle future sotto-classi il compito di realizzarle davvero.</p>
+<p>Infine, ecco il metodo <tt class="docutils literal"><span class="pre">__init__</span></tt>, che si occupa di definire il layout della parte comune dell&#8217;interfaccia. Qui creiamo le due caselle di testo che ci servivano. La parte più interessante, tuttavia, è questa:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">specific_layout</span><span class="p">(),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Inseriamo nel nostro sizer il risultato di un metodo <tt class="docutils literal"><span class="pre">specific_layout()</span></tt>. Si tratta di un&#8217;ennesima promessa (l&#8217;ultima, però) che dovremo mantenere, perché per il momento <tt class="docutils literal"><span class="pre">specific_layout</span></tt>... semplicemente non esiste!</p>
+<p>Ma non importa: aggiungiamo subito anche <tt class="docutils literal"><span class="pre">specific_layout</span></tt> alla lista dei metodi, e marchiamolo come &#8220;astratto&#8221; con il solito metodo di sollevare un <tt class="docutils literal"><span class="pre">NotImplementedError</span></tt>. Questo metodo sarà responsabile, nelle varie sotto-classi, di creare e disegnare il layout della parte specifica della tavola di confronto.</p>
+<p>C&#8217;è comunque un particolare ulteriore: siccome il risultato di <tt class="docutils literal"><span class="pre">specific_layout</span></tt> dovrà essere inserito all&#8217;interno di un sizer, è opportuno che questo metodo restituisca un <tt class="docutils literal"><span class="pre">wx.Panel</span></tt> o un altro <tt class="docutils literal"><span class="pre">wx.Sizer</span></tt>. Come sappiamo, Python non ha un meccanismo per costringere il rispetto della &#8220;signature&#8221; di una funzione: in questi casi, la cosa migliore è <strong>specificare molto bene</strong> quello che vogliamo nella docstring del metodo.</p>
+</div>
+<div class="section" id="fieldsconfrontarea-un-area-di-confronto-con-due-zone-di-colore-accostate">
+<h2>2.3. FieldsConfrontArea: un&#8217;area di confronto con due zone di colore accostate.<a class="headerlink" href="#fieldsconfrontarea-un-area-di-confronto-con-due-zone-di-colore-accostate" title="Permalink to this headline">¶</a></h2>
+<p>Adesso che la nostra classe-madre astratta è terminata, non resta che scrivere le sotto-classi concrete. In pratica, una sotto-classe concreta deve mantenere tutte le promesse fatte dalla classe-madre. Ma non sarà difficile!</p>
+<p>La prima area di confronto che scriviamo è molto semplice: ci bastano due rettangoli colorati, uno accanto all&#8217;altro. La classe <tt class="docutils literal"><span class="pre">FieldsConfrontArea</span></tt> implementa questo schema:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">FieldsConfrontArea</span><span class="p">(</span><span class="n">BaseConfrontArea</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;direction&#39;</span><span class="p">)</span>
+        <span class="n">BaseConfrontArea</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">specific_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">s</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="nf">change_color_1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col1</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">change_color_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col2</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="o">*</span><span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Iniziamo a osservare che, per mantenere le promesse fatte dalla classe-madre, sviluppa un metodo <tt class="docutils literal"><span class="pre">specific_layout</span></tt>, in cui crea i due rettangoli, li accosta dentro un sizer, e (dettaglio fondamentale) restituisce appunto questo sizer, pronto da essere inglobato insieme al resto dell&#8217;interfaccia già specificato dalla classe-madre.</p>
+<p>Poi implementa concretamente anche i metodi <tt class="docutils literal"><span class="pre">change_color_1</span></tt> e <tt class="docutils literal"><span class="pre">change_color_2</span></tt>: in questo caso, siccome i due rettangoli sono semplicemente dei <tt class="docutils literal"><span class="pre">wx.Panel</span></tt>, non dobbiamo fare altro che chiamare <tt class="docutils literal"><span class="pre">SetBackgroundColour</span></tt> e rinfrescare.</p>
+<p>Un&#8217;ultima finezza è nell&#8217;<tt class="docutils literal"><span class="pre">__init__</span></tt>: separiamo un parametro aggiuntivo <tt class="docutils literal"><span class="pre">direction</span></tt> prima di invocare e passare il controllo all&#8217;<tt class="docutils literal"><span class="pre">__init__</span></tt> della classe-madre. Useremo questo parametro per specificare (nel metodo <tt class="docutils literal"><span class="pre">specific_layout</span></tt>) se i due rettangoli devono essere accostati in verticale o in orizzontale.</p>
+<p>Così facendo, in pratica abbiamo ottenuto due aree di confronto al prezzo di una: senza scrivere un&#8217;altra classe apposta, ci basta cambiare valore al parametro per fare un&#8217;area di confronto differente.</p>
+</div>
+<div class="section" id="textonbgconfrontarea-un-area-per-confrontare-il-colore-di-un-testo-sullo-sfondo">
+<h2>2.4. TextOnBgConfrontArea: un&#8217;area per confrontare il colore di un testo sullo sfondo.<a class="headerlink" href="#textonbgconfrontarea-un-area-per-confrontare-il-colore-di-un-testo-sullo-sfondo" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">TextOnBgConfrontArea</span></tt> crea un&#8217;area di confronto costituita da una casella di testo in cui è possibile scrivere qualcosa. I due colori da confrontare, in questo caso, sono quello del testo e quello dello sfondo.</p>
+<p>Anche questa classe è corta e semplice da capire. Il metodo <tt class="docutils literal"><span class="pre">specific_layout</span></tt> è un po&#8217; più complesso, perché per l&#8217;occasione vogliamo anche aggiungere un pulsante per cambiare il font. Questo a sua volta richiede il binding dell&#8217;evento a un nuovo metodo <tt class="docutils literal"><span class="pre">on_font</span></tt>, dove gestiamo i dettagli della selezione di un nuovo font.</p>
+<p>Anche <tt class="docutils literal"><span class="pre">change_color_1</span></tt> e <tt class="docutils literal"><span class="pre">change_color_2</span></tt> devono essere implementati, tenendo conto che, questa volta, dobbiamo cambiare il colore di un <tt class="docutils literal"><span class="pre">wx.TextCtrl</span></tt>.</p>
+<p>Invece, non abbiamo bisogno di fare nessuna modifica all&#8217;<tt class="docutils literal"><span class="pre">__init__</span></tt>: ci teniamo quello della classe-madre così com&#8217;è.</p>
+</div>
+<div class="section" id="getconfrontarea-una-funzione-per-la-scelta-delle-aree-di-confronto">
+<h2>2.5. getConfrontArea: una funzione per la  scelta delle aree di confronto.<a class="headerlink" href="#getconfrontarea-una-funzione-per-la-scelta-delle-aree-di-confronto" title="Permalink to this headline">¶</a></h2>
+<p>Ed eccoci arrivati alla fine: abbiamo costruito lo scheletro della nostra tavola di confronto (<tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt>), all&#8217;interno della quale ospitiamo dinamicamente un&#8217;area di confronto. Poi abbiamo delineato una classe-madre astratta per le aree di confronto (<tt class="docutils literal"><span class="pre">BaseConfrontArea</span></tt>), e infine due implementazioni concrete (che valgono per tre!).</p>
+<p>Adesso, per concludere il nostro piccolo meccanismo di creazione &#8220;dinamica&#8221; delle tavole di confronto, non ci resta che studiare un sistema per attribuire la giusta area di confronto a <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt>.</p>
+<p>Partiamo con una costante a livello di modulo, che chiamiamo <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">AVAILABLE_AREAS</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">((</span>
+    <span class="p">(</span><span class="s">&#39;Due aree (orizzontale)&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">FieldsConfrontArea</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;direction&#39;</span><span class="p">:</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">})),</span>
+    <span class="p">(</span><span class="s">&#39;Due aree (verticale)&#39;</span><span class="p">,</span>   <span class="p">(</span><span class="n">FieldsConfrontArea</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;direction&#39;</span><span class="p">:</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">})),</span>
+    <span class="p">(</span><span class="s">&#39;Testo su sfondo&#39;</span><span class="p">,</span>        <span class="p">(</span><span class="n">TextOnBgConfrontArea</span><span class="p">,</span> <span class="p">{}))</span> <span class="p">,</span>
+    <span class="p">))</span>
+</pre></div>
+</div>
+<p>In pratica è un registro che tiene nota di tutte le aree di confronto disponibili. Per ciascuna registriamo un titolo (una stringa di testo descrittivo), la (sotto-)classe interessata, e gli eventuali argomenti aggiuntivi con cui bisogna chiamare questa classe.</p>
+<p>Notate che <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt> deve stare alla fine del modulo e non all&#8217;inizio, perché include dei nomi di classi che, al momento della compilazione, devono già essere stati parsati (se non vi è chiaro questo punto, provate a spostarla all&#8217;inizio del modulo, e vedrete che cosa succede...).</p>
+<p>Noterete anche che <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt> è un <tt class="docutils literal"><span class="pre">OrderedDict</span></tt>: questo è solo un dettaglio, ma serve, in pratica, per mantenere i titoli nell&#8217;ordine esatto in cui vogliamo che compaiano nel ComboBox della finestra principale dell&#8217;applicazione.</p>
+<p>A partire da <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt> scriviamo due funzioni di convenienza: la prima, <tt class="docutils literal"><span class="pre">getAvailableTables</span></tt>, restituisce semplicemente le chiavi, ed è usata dalla finestra principale per alimentare il ComboBox.</p>
+<p>La seconda, <tt class="docutils literal"><span class="pre">getConfrontArea</span></tt>, è il cuore del nostro sistema di dispatch dinamico: è una piccola factory-function che restituisce un&#8217;istanza già creata di un&#8217;area di confronto, a partire da una stringa di testo (oltre che da un primo argomento, che è semplicemente il &#8220;parent&#8221; dell&#8217;area di confronto):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">getConfrontArea</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">area_type</span><span class="p">):</span>
+    <span class="n">area</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="n">AVAILABLE_AREAS</span><span class="p">[</span><span class="n">area_type</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">area</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Per esempio, se noi la chiamiamo cosi:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">area</span> <span class="o">=</span> <span class="n">getConfrontArea</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="s">&#39;Due aree (orizzontale)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>il risultato sarà come aver chiamato:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">area</span> <span class="o">=</span> <span class="n">FieldsConfrontArea</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="s">&#39;direction&#39;</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Con questo semplice sistema (un registro <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt> e una factory <tt class="docutils literal"><span class="pre">getConfrontArea</span></tt>) noi risolviamo il problema di creare la &#8220;giusta&#8221; area di confronto a seconda della scelta dell&#8217;utente.</p>
+</div>
+<div class="section" id="come-aggiungere-una-nuova-area-di-confronto">
+<h2>2.6. Come aggiungere una nuova area di confronto.<a class="headerlink" href="#come-aggiungere-una-nuova-area-di-confronto" title="Permalink to this headline">¶</a></h2>
+<p>A questo punto è anche facile, eventualmente, aggiungere nuovi tipi di aree di confronto, all&#8217;occorrenza. Bisogna scrivere una nuova sotto-classe di <tt class="docutils literal"><span class="pre">BaseConfrontArea</span></tt>, facendo attenzione a implementare tutti i metodi richiesti. Quindi, basterà registrarla in <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt> per renderla automaticamente disponibile all&#8217;utente.</p>
+<p>Ancora più facile è l&#8217;operazione contraria: per eliminare una tavola di confronto, basta commentare la voce relativa in <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt>.</p>
+</div>
+<div class="section" id="l-interfaccia-pubblica-del-modulo">
+<h2>2.7. L&#8217;interfaccia pubblica del modulo.<a class="headerlink" href="#l-interfaccia-pubblica-del-modulo" title="Permalink to this headline">¶</a></h2>
+<p>In definitiva, tutto il modulo <tt class="docutils literal"><span class="pre">confront_area.py</span></tt> ha un&#8217;interfaccia esterna ridottissima, grazie al nostro sforzo per mantenere il codice ben organizzato.</p>
+<p>Il mondo esterno deve sapere solo due cose: la classe <tt class="docutils literal"><span class="pre">ConfrontWindow</span></tt> (che rappresenta, da sola, tutte le possibili tavole di confronto, presenti e future), e la piccola funzione di utilità <tt class="docutils literal"><span class="pre">getAvailableTables</span></tt> (che restituisce in modo conveniente le chiavi di <tt class="docutils literal"><span class="pre">AVAILABLE_AREAS</span></tt>).</p>
+<p>E quindi possiamo orgogliosamente dichiarare, in cima al modulo:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;getAvailableTables&#39;</span><span class="p">,</span> <span class="s">&#39;ConfrontWindow&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Questo ci consentirà lo stile di importazione <tt class="docutils literal"><span class="pre">from</span> <span class="pre">confront_area</span> <span class="pre">import</span> <span class="pre">*</span></tt>, senza la preoccupazione di importare anche nomi non necessari.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">2. Le tavole di confronto.</a><ul>
+<li><a class="reference internal" href="#confrontwindow-lo-scheletro-della-tavola-di-confronto">2.1. ConfrontWindow: lo scheletro della tavola di confronto.</a></li>
+<li><a class="reference internal" href="#baseconfrontarea-una-classe-base-astratta-per-le-aree-di-confronto">2.2. BaseConfrontArea: una classe-base astratta per le aree di confronto.</a></li>
+<li><a class="reference internal" href="#fieldsconfrontarea-un-area-di-confronto-con-due-zone-di-colore-accostate">2.3. FieldsConfrontArea: un&#8217;area di confronto con due zone di colore accostate.</a></li>
+<li><a class="reference internal" href="#textonbgconfrontarea-un-area-per-confrontare-il-colore-di-un-testo-sullo-sfondo">2.4. TextOnBgConfrontArea: un&#8217;area per confrontare il colore di un testo sullo sfondo.</a></li>
+<li><a class="reference internal" href="#getconfrontarea-una-funzione-per-la-scelta-delle-aree-di-confronto">2.5. getConfrontArea: una funzione per la  scelta delle aree di confronto.</a></li>
+<li><a class="reference internal" href="#come-aggiungere-una-nuova-area-di-confronto">2.6. Come aggiungere una nuova area di confronto.</a></li>
+<li><a class="reference internal" href="#l-interfaccia-pubblica-del-modulo">2.7. L&#8217;interfaccia pubblica del modulo.</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="parte_1.html"
+                        title="previous chapter">1. Costruire la finestra principale dell&#8217;applicazione.</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="parte_3.html"
+                        title="next chapter">3. Il sistema di messaggi tra i componenti del programma.</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/parte_2.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="parte_3.html" title="3. Il sistema di messaggi tra i componenti del programma."
+             >next</a></li>
+        <li class="right" >
+          <a href="parte_1.html" title="1. Costruire la finestra principale dell’applicazione."
+             >previous</a> |</li>
+        <li><a href="index.html">tutorial wxPython-OOP</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Riccardo Polignieri.
+      Last updated on Dec 01, 2011.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
