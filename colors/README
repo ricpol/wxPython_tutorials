@@ -1,0 +1,15 @@
+COLORS: tutorial wxPython
+=========================
+
+(c) 2011 Riccardo Polignieri (ric.pol@libero.it)
+licenza: GPL
+
+Un tutorial su alcuni aspetti 'avanzati ma non troppo' della programmazione 
+OOP con wxPython:
+
+  * come costruire widget complessi a partire da componenti più semplici;
+  * come creare e usare un semplice evento personalizzato;
+  * come usare alcune tecniche OOP per organizzare il codice;
+  * come applicare il pattern OOP noto come 'publish/subscriber' 
+    per far comunicare i componenti dell'interfaccia.
+
