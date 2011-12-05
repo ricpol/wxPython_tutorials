@@ -125,7 +125,7 @@ Ma c'è anche di più: è possibile creare delle gerarchie di topic, per esempio
 
 In questo modo, chi si abbona a "notizie.politica" riceverà solo i messaggi con topic "notizie.politica". Chi invece si abbona a "notizie" riceverà *tutti* i messaggi (quelli del topic più generale, e quelli di tutti i sotto-topic). 
 
-Per sapere tutti i dettagli di ``wx.lib.pubsub`` vi rimando alla sua documentazione on-line, che trovate qui: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX. A noi basta invece questa panoramica, e passiamo senz'altro a vedere come si può usare ``Publisher`` nel nostro caso. 
+Per sapere tutti i dettagli di ``wx.lib.pubsub`` vi rimando alla sua documentazione on-line, che trovate qui: http://www.wxpython.org/docs/api/wx.lib.pubsub-module.html. A noi basta invece questa panoramica, e passiamo senz'altro a vedere come si può usare ``Publisher`` nel nostro caso. 
 
 
 3.4. Aggiungere un sistema pub/sub al nostro programma.
